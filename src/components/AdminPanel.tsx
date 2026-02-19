@@ -379,8 +379,9 @@ export default function AdminPanel() {
       console.log('📋 Headers:', Object.fromEntries(response.headers.entries()));
 
       let result;
+      let text: string | null = null;
       try {
-        const text = await response.text();
+        text = await response.text();
         console.log('📄 Texto de respuesta recibido:', text.substring(0, 500));
         
         if (!text) {
@@ -393,7 +394,9 @@ export default function AdminPanel() {
         console.log('✅ JSON parseado correctamente:', result);
       } catch (parseError) {
         console.error('❌ Error al parsear respuesta:', parseError);
-        console.error('📄 Texto que causó el error:', text?.substring(0, 500));
+        if (text) {
+          console.error('📄 Texto que causó el error:', text.substring(0, 500));
+        }
         setMessage(`⚠️ Error: No se pudo procesar la respuesta del servidor. Status: ${response.status}`);
         setLoading(false);
         return;
@@ -2488,11 +2491,22 @@ export default function AdminPanel() {
               <h2 style={{ margin: 0 }}>🏆 Tabla de Liga</h2>
               <button 
                 onClick={() => {
-                  if (confirm('¿Estás seguro de limpiar toda la tabla de liga? Esto eliminará todos los equipos y sus estadísticas.')) {
+                  if (confirm('¿Estás seguro de limpiar las estadísticas de la liga? Esto reseteará puntos, partidos jugados y goles, pero mantendrá los equipos.')) {
                     const newData = { ...data };
-                    newData.league.teams = [];
+                    // Solo resetear estadísticas, mantener equipos con sus nombres y colores
+                    newData.league.teams = newData.league.teams.map((team: Team) => ({
+                      ...team,
+                      played: 0,
+                      wins: 0,
+                      draws: 0,
+                      losses: 0,
+                      goalsFor: 0,
+                      goalsAgainst: 0,
+                      goalDifference: 0,
+                      points: 0
+                    }));
                     setData(newData);
-                    setMessage('✅ Tabla de liga limpiada correctamente');
+                    setMessage('✅ Estadísticas de la liga limpiadas correctamente');
                   }
                 }}
                 className="remove-btn"
