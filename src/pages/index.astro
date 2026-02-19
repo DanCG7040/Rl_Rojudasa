@@ -1,0 +1,92 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navigation from '../components/Navigation';
+import Hero from '../components/Hero';
+import TournamentInfo from '../components/TournamentInfo';
+import Rules from '../components/Rules';
+import TournamentBracket from '../components/TournamentBracket';
+import LeagueTable from '../components/LeagueTable';
+import UpcomingMatches from '../components/UpcomingMatches';
+import MapSection from '../components/MapSection';
+import Organizers from '../components/Organizers';
+---
+
+<Layout title="Ligas y Copas Competitivas">
+  <Navigation client:load />
+  <Hero client:load />
+  <TournamentInfo client:load />
+  <Rules client:load />
+  <UpcomingMatches client:load />
+  <TournamentBracket client:load />
+  <MapSection client:load />
+  <Organizers client:load />
+  
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 RL ROJUDASA. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <a href="https://wa.me/3004201706?text=Hola,%20quiero%20participar%20en%20el%20torneo" class="participate-btn-floating" target="_blank" rel="noopener noreferrer">
+    🎮 Participa
+  </a>
+</Layout>
+
+<style>
+  .footer {
+    padding: 40px 0;
+    background: #0a0a0a;
+    border-top: 1px solid rgba(255, 107, 53, 0.2);
+    text-align: center;
+  }
+
+  .footer p {
+    color: #b0b0b0;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  .participate-btn-floating {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 15px 30px;
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 30px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+    z-index: 999;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .participate-btn-floating:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 6px 25px rgba(37, 211, 102, 0.5);
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+    }
+    50% {
+      box-shadow: 0 4px 25px rgba(37, 211, 102, 0.6);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .participate-btn-floating {
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 24px;
+      font-size: 0.9rem;
+    }
+  }
+</style>

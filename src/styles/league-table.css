@@ -1,0 +1,106 @@
+.league-table-section {
+  padding: 100px 0 60px 0;
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+  min-height: calc(100vh - 80px);
+}
+
+.league-table-section .section-title {
+  margin-bottom: 30px;
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  color: #ffffff;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  background: rgba(26, 26, 26, 0.8);
+  border: 1px solid rgba(255, 107, 53, 0.2);
+}
+
+.league-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.league-table thead {
+  background: rgba(255, 107, 53, 0.1);
+}
+
+.league-table th {
+  padding: 15px 10px;
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.9rem;
+  color: #b0b0b0;
+  font-weight: 600;
+  border-bottom: 2px solid rgba(255, 107, 53, 0.3);
+}
+
+.league-table th.sortable {
+  cursor: pointer;
+  transition: color 0.3s ease;
+  user-select: none;
+}
+
+.league-table th.sortable:hover {
+  color: #ff6b35;
+}
+
+.league-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.3s ease;
+}
+
+.league-table tbody tr:hover {
+  background: rgba(255, 107, 53, 0.05);
+}
+
+.league-table td {
+  padding: 12px 10px;
+  text-align: center;
+  color: #ffffff;
+  font-size: 0.95rem;
+}
+
+.league-table td.position {
+  font-weight: 700;
+  color: #ff6b35;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.league-table td.team-name {
+  text-align: left;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.league-table td.points {
+  font-weight: 700;
+  color: #ffd23f;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+}
+
+.league-table td.positive {
+  color: #4ade80;
+}
+
+.league-table td.negative {
+  color: #f87171;
+}
+
+@media (max-width: 768px) {
+  .league-table {
+    font-size: 0.85rem;
+  }
+
+  .league-table th,
+  .league-table td {
+    padding: 10px 5px;
+  }
+}

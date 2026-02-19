@@ -1,0 +1,239 @@
+{
+  "bracket": {
+    "koPlayoffs": [
+      {
+        "id": "ko1",
+        "team1": { "name": "Team Alpha", "score": 2 },
+        "team2": { "name": "Team Beta", "score": 3 },
+        "completed": true,
+        "date": "16 Feb"
+      },
+      {
+        "id": "ko2",
+        "team1": { "name": "Team Gamma", "score": 4 },
+        "team2": { "name": "Team Delta", "score": 1 },
+        "completed": true,
+        "date": "16 Feb"
+      },
+      {
+        "id": "ko3",
+        "team1": { "name": "Team Echo", "score": 2 },
+        "team2": { "name": "Team Foxtrot", "score": 2 },
+        "completed": true,
+        "date": "18 Feb"
+      },
+      {
+        "id": "ko4",
+        "team1": { "name": "Team Golf", "score": 1 },
+        "team2": { "name": "Team Hotel", "score": 3 },
+        "completed": true,
+        "date": "18 Feb"
+      },
+      {
+        "id": "ko5",
+        "team1": { "name": "Team India", "score": 0 },
+        "team2": { "name": "Team Juliet", "score": 2 },
+        "completed": true,
+        "date": "23 Feb"
+      },
+      {
+        "id": "ko6",
+        "team1": { "name": "Team Kilo", "score": 3 },
+        "team2": { "name": "Team Lima", "score": 1 },
+        "completed": true,
+        "date": "23 Feb"
+      },
+      {
+        "id": "ko7",
+        "team1": { "name": "Team Mike", "score": 2 },
+        "team2": { "name": "Team November", "score": 4 },
+        "completed": true,
+        "date": "25 Feb"
+      },
+      {
+        "id": "ko8",
+        "team1": { "name": "Team Oscar", "score": 5 },
+        "team2": { "name": "Team Papa", "score": 0 },
+        "completed": true,
+        "date": "25 Feb"
+      }
+    ],
+    "roundOf16": [
+      {
+        "id": "r16-1",
+        "team1": { "name": "KO Winner 1", "score": null },
+        "team2": { "name": "Team Seed 1", "score": null },
+        "completed": false,
+        "date": "9 Mar"
+      },
+      {
+        "id": "r16-2",
+        "team1": { "name": "KO Winner 2", "score": null },
+        "team2": { "name": "Team Seed 2", "score": null },
+        "completed": false,
+        "date": "9 Mar"
+      },
+      {
+        "id": "r16-3",
+        "team1": { "name": "KO Winner 3", "score": null },
+        "team2": { "name": "Team Seed 3", "score": null },
+        "completed": false,
+        "date": "11 Mar"
+      },
+      {
+        "id": "r16-4",
+        "team1": { "name": "KO Winner 4", "score": null },
+        "team2": { "name": "Team Seed 4", "score": null },
+        "completed": false,
+        "date": "11 Mar"
+      },
+      {
+        "id": "r16-5",
+        "team1": { "name": "KO Winner 5", "score": null },
+        "team2": { "name": "Team Seed 5", "score": null },
+        "completed": false,
+        "date": "16 Mar"
+      },
+      {
+        "id": "r16-6",
+        "team1": { "name": "KO Winner 6", "score": null },
+        "team2": { "name": "Team Seed 6", "score": null },
+        "completed": false,
+        "date": "16 Mar"
+      },
+      {
+        "id": "r16-7",
+        "team1": { "name": "KO Winner 7", "score": null },
+        "team2": { "name": "Team Seed 7", "score": null },
+        "completed": false,
+        "date": "18 Mar"
+      },
+      {
+        "id": "r16-8",
+        "team1": { "name": "KO Winner 8", "score": null },
+        "team2": { "name": "Team Seed 8", "score": null },
+        "completed": false,
+        "date": "18 Mar"
+      }
+    ],
+    "quarterFinals": [
+      { "id": "qf-1", "team1": { "name": "TBD", "score": null }, "team2": { "name": "TBD", "score": null }, "completed": false, "date": "6 Apr" },
+      { "id": "qf-2", "team1": { "name": "TBD", "score": null }, "team2": { "name": "TBD", "score": null }, "completed": false, "date": "6 Apr" },
+      { "id": "qf-3", "team1": { "name": "TBD", "score": null }, "team2": { "name": "TBD", "score": null }, "completed": false, "date": "8 Apr" },
+      { "id": "qf-4", "team1": { "name": "TBD", "score": null }, "team2": { "name": "TBD", "score": null }, "completed": false, "date": "8 Apr" }
+    ],
+    "semiFinals": [
+      { "id": "sf-1", "team1": { "name": "TBD", "score": null }, "team2": { "name": "TBD", "score": null }, "completed": false, "date": "27 Apr" },
+      { "id": "sf-2", "team1": { "name": "TBD", "score": null }, "team2": { "name": "TBD", "score": null }, "completed": false, "date": "29 Apr" }
+    ],
+    "final": {
+      "id": "final",
+      "team1": { "name": "TBD", "score": null },
+      "team2": { "name": "TBD", "score": null },
+      "completed": false,
+      "date": "29 May"
+    }
+  },
+  "league": {
+    "teams": [
+      {
+        "position": 1,
+        "name": "Team Alpha",
+        "played": 10,
+        "wins": 9,
+        "draws": 0,
+        "losses": 1,
+        "goalsFor": 84,
+        "goalsAgainst": 27,
+        "goalDifference": 57,
+        "points": 27
+      },
+      {
+        "position": 2,
+        "name": "Team Beta",
+        "played": 10,
+        "wins": 7,
+        "draws": 0,
+        "losses": 3,
+        "goalsFor": 57,
+        "goalsAgainst": 25,
+        "goalDifference": 32,
+        "points": 21
+      },
+      {
+        "position": 3,
+        "name": "Team Gamma",
+        "played": 10,
+        "wins": 5,
+        "draws": 0,
+        "losses": 5,
+        "goalsFor": 50,
+        "goalsAgainst": 34,
+        "goalDifference": 16,
+        "points": 15
+      },
+      {
+        "position": 4,
+        "name": "Team Delta",
+        "played": 10,
+        "wins": 5,
+        "draws": 0,
+        "losses": 5,
+        "goalsFor": 29,
+        "goalsAgainst": 33,
+        "goalDifference": -4,
+        "points": 15
+      },
+      {
+        "position": 5,
+        "name": "Team Echo",
+        "played": 10,
+        "wins": 4,
+        "draws": 0,
+        "losses": 6,
+        "goalsFor": 31,
+        "goalsAgainst": 47,
+        "goalDifference": -16,
+        "points": 12
+      },
+      {
+        "position": 6,
+        "name": "Team Foxtrot",
+        "played": 10,
+        "wins": 0,
+        "draws": 0,
+        "losses": 10,
+        "goalsFor": 12,
+        "goalsAgainst": 97,
+        "goalDifference": -85,
+        "points": 0
+      }
+    ]
+  },
+  "upcomingMatches": [
+    {
+      "id": "up1",
+      "team1": "Team Alpha",
+      "team2": "Team Beta",
+      "date": "20 Feb",
+      "time": "20:00",
+      "type": "Liga"
+    },
+    {
+      "id": "up2",
+      "team1": "Team Gamma",
+      "team2": "Team Delta",
+      "date": "22 Feb",
+      "time": "21:00",
+      "type": "Copa"
+    },
+    {
+      "id": "up3",
+      "team1": "Team Echo",
+      "team2": "Team Foxtrot",
+      "date": "25 Feb",
+      "time": "19:00",
+      "type": "Liga"
+    }
+  ]
+}

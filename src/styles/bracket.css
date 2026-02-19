@@ -1,0 +1,184 @@
+.bracket-section {
+  padding: 60px 0;
+  background: #0a0a0a;
+  min-height: auto;
+}
+
+.bracket-container {
+  overflow-x: auto;
+  padding: 20px 0;
+}
+
+.bracket-wrapper {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  align-items: flex-start;
+  min-width: fit-content;
+  padding: 40px 20px;
+}
+
+.bracket-round {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  min-width: 300px;
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.bracket-round.animate-on-scroll {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.round-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.round-header h3 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  color: #ff6b35;
+  font-weight: 700;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+.round-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.match {
+  background: linear-gradient(135deg, #1a1a1a 0%, #252525 100%);
+  border: 2px solid rgba(255, 107, 53, 0.2);
+  border-radius: 15px;
+  padding: 25px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.match::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #ff6b35, transparent);
+  transform: scaleX(0);
+  transition: transform 0.4s;
+}
+
+.match:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 107, 53, 0.5);
+  box-shadow: 0 10px 30px rgba(255, 107, 53, 0.2);
+}
+
+.match:hover::before {
+  transform: scaleX(1);
+}
+
+.match-team {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  margin: 10px 0;
+  transition: all 0.3s;
+}
+
+.match-team:hover {
+  background: rgba(255, 107, 53, 0.1);
+}
+
+.team-name {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.team-players {
+  font-size: 0.9rem;
+  color: #b0b0b0;
+  font-style: italic;
+}
+
+.match-vs {
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  color: #ff6b35;
+  font-weight: 700;
+  margin: 15px 0;
+  position: relative;
+}
+
+.match-vs::before,
+.match-vs::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 40px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 107, 53, 0.5), transparent);
+}
+
+.match-vs::before {
+  left: -50px;
+}
+
+.match-vs::after {
+  right: -50px;
+}
+
+.match-winner {
+  text-align: center;
+  margin-top: 15px;
+  padding: 10px;
+  background: rgba(255, 107, 53, 0.1);
+  border-radius: 8px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  color: #ffd23f;
+  font-size: 1.1rem;
+}
+
+/* Conectores entre rondas */
+.bracket-round:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 107, 53, 0.5), transparent);
+  z-index: -1;
+}
+
+@media (max-width: 1024px) {
+  .bracket-wrapper {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .bracket-round {
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .bracket-round:not(:last-child)::after {
+    display: none;
+  }
+}

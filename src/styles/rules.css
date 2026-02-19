@@ -1,0 +1,123 @@
+.rules-section {
+  padding: 60px 0;
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+  position: relative;
+}
+
+.rules-content {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.rule-item {
+  background: linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(37, 37, 37, 0.8) 100%);
+  border: 1px solid rgba(255, 107, 53, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.rule-item:hover {
+  border-color: rgba(255, 107, 53, 0.4);
+  transform: translateX(5px);
+}
+
+.rule-item.expanded {
+  border-color: rgba(255, 107, 53, 0.5);
+  box-shadow: 0 5px 20px rgba(255, 107, 53, 0.2);
+}
+
+.rule-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 25px;
+  transition: all 0.3s ease;
+}
+
+.rule-item.expanded .rule-header {
+  background: rgba(255, 107, 53, 0.05);
+}
+
+.rule-number {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2rem;
+  font-weight: 900;
+  color: rgba(255, 107, 53, 0.5);
+  line-height: 1;
+  min-width: 50px;
+}
+
+.rule-item.expanded .rule-number {
+  color: #ff6b35;
+}
+
+.rule-header h3 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.3rem;
+  color: #ffffff;
+  margin: 0;
+  font-weight: 700;
+  flex: 1;
+  transition: color 0.3s ease;
+}
+
+.rule-item.expanded .rule-header h3 {
+  color: #ff6b35;
+}
+
+.rule-toggle {
+  font-size: 1.5rem;
+  color: #ff6b35;
+  font-weight: 700;
+  min-width: 30px;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.rule-item.expanded .rule-toggle {
+  transform: rotate(90deg);
+}
+
+.rule-description {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, padding 0.4s ease;
+  padding: 0 25px;
+}
+
+.rule-description.show {
+  max-height: 200px;
+  padding: 0 25px 20px 95px;
+}
+
+.rule-description p {
+  color: #b0b0b0;
+  line-height: 1.6;
+  font-size: 1rem;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .rule-header {
+    padding: 15px 20px;
+    gap: 15px;
+  }
+
+  .rule-number {
+    font-size: 1.5rem;
+    min-width: 40px;
+  }
+
+  .rule-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .rule-description.show {
+    padding: 0 20px 15px 75px;
+  }
+}
