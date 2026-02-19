@@ -18,8 +18,6 @@ export default function Hero() {
           LIGAS Y COPAS COMPETITIVAS
         </p>
         <div className={`hero-date ${isVisible ? 'animate-fade-in-delay-2' : ''}`}>
-          <span className="date-icon">📅</span>
-          <span>Ligas: Meses Impares | Copas: Meses Pares</span>
         </div>
       </div>
     </section>

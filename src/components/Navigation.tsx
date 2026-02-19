@@ -4,18 +4,28 @@ import '../styles/navigation.css';
 export default function Navigation() {
   const [activeSection, setActiveSection] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isLigaPage, setIsLigaPage] = useState(false);
+  const [currentPage, setCurrentPage] = useState('');
 
   useEffect(() => {
-    // Detectar si estamos en la página de liga
+    // Detectar en qué página estamos
     const path = window.location.pathname;
-    setIsLigaPage(path === '/liga' || path === '/liga/');
+    if (path === '/liga' || path === '/liga/') {
+      setCurrentPage('liga');
+    } else if (path === '/informacion' || path === '/informacion/') {
+      setCurrentPage('informacion');
+    } else if (path === '/copa' || path === '/copa/') {
+      setCurrentPage('copa');
+    } else if (path === '/acerca-de-nosotros' || path === '/acerca-de-nosotros/') {
+      setCurrentPage('acerca-de-nosotros');
+    } else {
+      setCurrentPage('');
+    }
 
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
       
-      // Solo detectar secciones si no estamos en la página de liga
-      if (!isLigaPage) {
+      // Solo detectar secciones si estamos en la página principal
+      if (!currentPage) {
         const sections = ['hero', 'info', 'rules', 'upcoming', 'bracket', 'map'];
         const current = sections.find(section => {
           const element = document.getElementById(section);
@@ -32,7 +42,7 @@ export default function Navigation() {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [isLigaPage]);
+  }, [currentPage]);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -48,26 +58,25 @@ export default function Navigation() {
     }
   };
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, section: string) => {
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, page: string) => {
     e.preventDefault();
     const currentPath = window.location.pathname;
-    const onLigaPage = currentPath === '/liga' || currentPath === '/liga/';
+    const isOnPage = currentPath !== '/' && currentPath !== '';
     
-    if (onLigaPage && section !== 'liga') {
-      // Si estamos en la página de liga y queremos ir a otra sección, ir a la página principal
-      window.location.href = `/#${section}`;
-    } else if (section === 'liga') {
-      window.location.href = '/liga';
+    if (isOnPage && page !== currentPath.replace('/', '')) {
+      // Si estamos en una página y queremos ir a otra, navegar normalmente
+      window.location.href = `/${page}`;
+    } else if (page && page !== 'home') {
+      window.location.href = `/${page}`;
     } else {
-      scrollToSection(section);
+      window.location.href = '/';
     }
   };
 
   const handleLogoClick = () => {
     const currentPath = window.location.pathname;
-    const onLigaPage = currentPath === '/liga' || currentPath === '/liga/';
     
-    if (onLigaPage) {
+    if (currentPath !== '/' && currentPath !== '') {
       window.location.href = '/';
     } else {
       scrollToSection('hero');
@@ -82,46 +91,32 @@ export default function Navigation() {
         </div>
         <div className="nav-links">
           <a 
-            href="#info" 
-            className={activeSection === 'info' ? 'active' : ''}
-            onClick={(e) => handleNavClick(e, 'info')}
+            href="/informacion"
+            className={currentPage === 'informacion' ? 'active' : ''}
+            onClick={(e) => handleNavClick(e, 'informacion')}
           >
-            Sistema
-          </a>
-          <a 
-            href="#rules" 
-            className={activeSection === 'rules' ? 'active' : ''}
-            onClick={(e) => handleNavClick(e, 'rules')}
-          >
-            Reglas
+            Información
           </a>
           <a 
             href="/liga"
-            className={(isLigaPage || activeSection === 'league') ? 'active' : ''}
+            className={currentPage === 'liga' ? 'active' : ''}
             onClick={(e) => handleNavClick(e, 'liga')}
           >
             Liga
           </a>
           <a 
-            href="#upcoming" 
-            className={activeSection === 'upcoming' ? 'active' : ''}
-            onClick={(e) => handleNavClick(e, 'upcoming')}
+            href="/copa"
+            className={currentPage === 'copa' ? 'active' : ''}
+            onClick={(e) => handleNavClick(e, 'copa')}
           >
-            Próximos
+            Copa
           </a>
           <a 
-            href="#bracket" 
-            className={activeSection === 'bracket' ? 'active' : ''}
-            onClick={(e) => handleNavClick(e, 'bracket')}
+            href="/acerca-de-nosotros"
+            className={currentPage === 'acerca-de-nosotros' ? 'active' : ''}
+            onClick={(e) => handleNavClick(e, 'acerca-de-nosotros')}
           >
-            Torneo
-          </a>
-          <a 
-            href="#map" 
-            className={activeSection === 'map' ? 'active' : ''}
-            onClick={(e) => handleNavClick(e, 'map')}
-          >
-            Estadios
+            Acerca de nosotros
           </a>
         </div>
       </div>

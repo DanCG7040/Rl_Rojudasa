@@ -1,0 +1,60 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navigation from '../../components/Navigation';
+---
+
+<Layout title="Ligas - RL ROJUDASA">
+  <Navigation client:load />
+  
+  <main class="page-container">
+    <div class="container">
+      <h1>Ligas</h1>
+      <p>Contenido sobre las ligas...</p>
+    </div>
+  </main>
+  
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 RL ROJUDASA. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+</Layout>
+
+<style>
+  .page-container {
+    min-height: calc(100vh - 200px);
+    padding: 100px 20px 40px;
+    background: #0a0a0a;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    color: #ff6b35;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+  }
+
+  p {
+    color: #b0b0b0;
+    font-size: 1.1rem;
+    line-height: 1.6;
+  }
+
+  .footer {
+    padding: 40px 0;
+    background: #0a0a0a;
+    border-top: 1px solid rgba(255, 107, 53, 0.2);
+    text-align: center;
+  }
+
+  .footer p {
+    color: #b0b0b0;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+</style>

@@ -2,24 +2,16 @@
 import Layout from '../layouts/Layout.astro';
 import Navigation from '../components/Navigation';
 import Hero from '../components/Hero';
-import TournamentInfo from '../components/TournamentInfo';
-import Rules from '../components/Rules';
 import TournamentBracket from '../components/TournamentBracket';
 import LeagueTable from '../components/LeagueTable';
 import UpcomingMatches from '../components/UpcomingMatches';
-import MapSection from '../components/MapSection';
-import Organizers from '../components/Organizers';
 ---
 
 <Layout title="Ligas y Copas Competitivas">
   <Navigation client:load />
   <Hero client:load />
-  <TournamentInfo client:load />
-  <Rules client:load />
   <UpcomingMatches client:load />
   <TournamentBracket client:load />
-  <MapSection client:load />
-  <Organizers client:load />
   
   <footer class="footer">
     <div class="container">

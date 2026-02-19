@@ -1,5 +1,5 @@
 .info-section {
-  padding: 60px 0;
+  padding: 100px 0 60px;
   background: #0a0a0a;
   position: relative;
 }
@@ -23,7 +23,7 @@
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 30px;
+  gap: 50px;
   margin-top: 40px;
 }
 
@@ -38,6 +38,10 @@
   transform: translateY(50px) scale(0.9);
   position: relative;
   overflow: hidden;
+  text-decoration: none;
+  display: block;
+  color: inherit;
+  cursor: pointer;
 }
 
 .info-card::before {
@@ -90,7 +94,7 @@
 
 .info-card h3 {
   font-family: 'Orbitron', sans-serif;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   color: #ff6b35;
   margin-bottom: 15px;
   font-weight: 700;
@@ -99,5 +103,6 @@
 .info-card p {
   color: #b0b0b0;
   line-height: 1.6;
-  font-size: 1rem;
+  font-size: 1.15rem;
+  text-align: justify;
 }
