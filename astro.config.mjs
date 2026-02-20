@@ -1,10 +1,14 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
+import vercel from '@astrojs/vercel';
 
 // https://astro.build/config
 export default defineConfig({
   integrations: [react()],
-  output: 'hybrid', // Híbrido: páginas estáticas + API routes
+  output: 'hybrid', // Páginas estáticas + API routes como serverless en Vercel
+  adapter: vercel({
+    maxDuration: 10,
+  }),
   build: {
     assets: 'assets'
   }
