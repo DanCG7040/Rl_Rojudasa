@@ -1,5 +1,5 @@
 .map-section {
-  padding: 60px 0;
+  padding: clamp(40px, 8vw, 60px) 0;
   background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
 }
 
@@ -375,5 +375,18 @@
     width: 35px;
     height: 35px;
     font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .map-display-image {
+    max-height: 320px;
+  }
+  .map-display-name {
+    font-size: 1.2rem;
+  }
+  .maps-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
   }
 }

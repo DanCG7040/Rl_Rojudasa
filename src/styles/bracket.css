@@ -182,3 +182,35 @@
     display: none;
   }
 }
+
+@media (max-width: 768px) {
+  .bracket-section {
+    padding: 40px 0;
+  }
+  .bracket-wrapper {
+    padding: 20px 12px;
+    gap: 24px;
+  }
+  .bracket-round {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+  .match {
+    padding: 16px;
+  }
+  .round-header h3 {
+    font-size: 1.2rem;
+    padding: 8px 16px;
+  }
+  .match-vs::before,
+  .match-vs::after {
+    width: 24px;
+  }
+  .match-vs::before {
+    left: -30px;
+  }
+  .match-vs::after {
+    right: -30px;
+  }
+}

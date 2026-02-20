@@ -239,3 +239,30 @@
     display: none;
   }
 }
+
+@media (max-width: 768px) {
+  .tournament-bracket-section {
+    padding: 40px 0;
+  }
+  .bracket-wrapper {
+    padding: 20px 12px;
+    gap: 20px;
+  }
+  .bracket-stage {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .match-box {
+    min-width: 0;
+    padding: 10px;
+  }
+  .match-box.final-match {
+    min-width: 0;
+  }
+  .stage-header h3 {
+    font-size: 0.9rem;
+  }
+  .team-name {
+    font-size: 0.85rem;
+  }
+}
