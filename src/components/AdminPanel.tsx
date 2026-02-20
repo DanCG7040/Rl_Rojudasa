@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import '../styles/admin.css';
 
-// Credenciales de acceso
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'rojudasa2026';
+// Login validado contra la base de datos (usuario/contraseña en colección admin)
 
 const TEAM_COLORS = [
   '#ff6b35', '#4ade80', '#38bdf8', '#f472b6', '#fbbf24',
@@ -69,6 +67,27 @@ export default function AdminPanel() {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [tournamentType, setTournamentType] = useState<'groups' | 'direct'>('groups');
+  const [knockoutRoundTab, setKnockoutRoundTab] = useState<'roundOf16' | 'quarterFinals' | 'semiFinals' | 'final'>('roundOf16');
+
+  // Permite 0 como marcador (parseInt(x)||null convierte 0 en null)
+  const parseScoreInput = (value: string): number | null => {
+    const v = value.trim();
+    if (v === '') return null;
+    const n = parseInt(v, 10);
+    return isNaN(n) ? null : n;
+  };
+
+  // Equipos ya usados en otros partidos de la misma ronda (para no repetir en el desplegable)
+  const getTeamsUsedInOtherMatches = (roundMatches: any[] | undefined, currentIndex: number): Set<string> => {
+    if (!roundMatches || !Array.isArray(roundMatches)) return new Set();
+    const used = new Set<string>();
+    roundMatches.forEach((m: any, i: number) => {
+      if (i === currentIndex) return;
+      if (m.team1?.name && m.team1.name !== 'Por Definir') used.add(m.team1.name);
+      if (m.team2?.name && m.team2.name !== 'Por Definir') used.add(m.team2.name);
+    });
+    return used;
+  };
 
   useEffect(() => {
     const auth = localStorage.getItem('admin_auth');
@@ -139,17 +158,27 @@ export default function AdminPanel() {
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      localStorage.setItem('admin_auth', 'true');
-      loadData();
-      setUsername('');
-      setPassword('');
-      setMessage('');
-    } else {
-      setMessage('Usuario o contraseña incorrectos');
+    setMessage('');
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setIsAuthenticated(true);
+        localStorage.setItem('admin_auth', 'true');
+        loadData();
+        setUsername('');
+        setPassword('');
+      } else {
+        setMessage(data.error || 'Usuario o contraseña incorrectos');
+      }
+    } catch {
+      setMessage('Error de conexión. Revisa la consola.');
     }
   };
 
@@ -1462,7 +1491,7 @@ export default function AdminPanel() {
                           <input
                             type="number"
                             value={match.team1Score ?? ''}
-                            onChange={(e) => updateGroupMatch(groupIndex, matchIndex, 'team1Score', parseInt(e.target.value) || null)}
+                            onChange={(e) => updateGroupMatch(groupIndex, matchIndex, 'team1Score', parseScoreInput(e.target.value))}
                             placeholder="Goles"
                             style={{ width: '70px', textAlign: 'center' }}
                             min="0"
@@ -1471,7 +1500,7 @@ export default function AdminPanel() {
                           <input
                             type="number"
                             value={match.team2Score ?? ''}
-                            onChange={(e) => updateGroupMatch(groupIndex, matchIndex, 'team2Score', parseInt(e.target.value) || null)}
+                            onChange={(e) => updateGroupMatch(groupIndex, matchIndex, 'team2Score', parseScoreInput(e.target.value))}
                             placeholder="Goles"
                             style={{ width: '70px', textAlign: 'center' }}
                             min="0"
@@ -1518,18 +1547,50 @@ export default function AdminPanel() {
                 <div className="admin-note" style={{ background: '#1e3a5f', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
                   <strong>💡 Instrucciones - Eliminación Directa:</strong> 
                   <ol style={{ marginLeft: '20px', marginTop: '10px' }}>
-                    <li>Selecciona los equipos directamente para cada fase</li>
-                    <li>Ingresa los resultados de los partidos</li>
-                    <li>Los ganadores avanzan automáticamente a la siguiente ronda</li>
-                    <li>Los próximos partidos se generan automáticamente</li>
+                    <li>Elige la fase que quieres configurar (Octavos, Cuartos, Semifinales o Final)</li>
+                    <li>Selecciona los equipos para cada partido de esa fase</li>
+                    <li>Ingresa los resultados; los ganadores avanzan automáticamente a la siguiente ronda</li>
                   </ol>
                 </div>
+
+                {/* Selector de fase: Octavos | Cuartos | Semifinales | Final */}
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '10px', 
+                  marginBottom: '24px', 
+                  flexWrap: 'wrap',
+                  background: '#1a1a2e',
+                  padding: '12px',
+                  borderRadius: '10px',
+                  border: '2px solid #ff6b35'
+                }}>
+                  {(['roundOf16', 'quarterFinals', 'semiFinals', 'final'] as const).map((round) => (
+                    <button
+                      key={round}
+                      type="button"
+                      onClick={() => setKnockoutRoundTab(round)}
+                      style={{
+                        padding: '12px 20px',
+                        borderRadius: '8px',
+                        border: `2px solid ${knockoutRoundTab === round ? '#ff6b35' : '#444'}`,
+                        background: knockoutRoundTab === round ? 'rgba(255, 107, 53, 0.3)' : 'transparent',
+                        color: '#fff',
+                        fontWeight: knockoutRoundTab === round ? 700 : 400,
+                        cursor: 'pointer',
+                        fontSize: '0.95rem'
+                      }}
+                    >
+                      {round === 'roundOf16' && '🥉 Octavos'}
+                      {round === 'quarterFinals' && '🥈 Cuartos'}
+                      {round === 'semiFinals' && '🥇 Semifinales'}
+                      {round === 'final' && '🏆 Final'}
+                    </button>
+                  ))}
+                </div>
                 
-                {/* Fases Eliminatorias - Eliminación Directa */}
+                {/* Fases Eliminatorias - solo la ronda seleccionada */}
                 <div style={{ marginTop: '20px' }}>
-                  <h2 style={{ color: '#ff6b35', marginBottom: '20px' }}>Fases Eliminatorias</h2>
-                  
-                  {/* Octavos de Final */}
+                  {knockoutRoundTab === 'roundOf16' && (
                   <div className="admin-subsection">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                       <h3>Octavos de Final</h3>
@@ -1563,7 +1624,9 @@ export default function AdminPanel() {
                     {(!data.tournament?.knockoutRounds?.roundOf16 || data.tournament.knockoutRounds.roundOf16.length === 0) ? (
                       <p style={{ color: '#b0b0b0', textAlign: 'center', padding: '20px' }}>No hay partidos de octavos aún. Haz clic en "➕ Añadir Partido" para comenzar.</p>
                     ) : (
-                      data.tournament.knockoutRounds.roundOf16.map((match: any, index: number) => (
+                      data.tournament.knockoutRounds.roundOf16.map((match: any, index: number) => {
+                        const usedInOtherR16 = getTeamsUsedInOtherMatches(data.tournament?.knockoutRounds?.roundOf16, index);
+                        return (
                         <div key={match.id} className="admin-match" style={{ marginBottom: '10px' }}>
                           <select
                             value={match.team1.name}
@@ -1576,7 +1639,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="Por Definir">Por Definir</option>
-                            {data.league.teams.map((team: Team) => (
+                            {data.league.teams.filter((team: Team) => team.name === match.team1.name || !usedInOtherR16.has(team.name)).map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -1585,7 +1648,7 @@ export default function AdminPanel() {
                             value={match.team1.score ?? ''}
                             onChange={(e) => {
                               const newData = { ...data };
-                              const newScore = parseInt(e.target.value) || null;
+                              const newScore = parseScoreInput(e.target.value);
                               newData.tournament.knockoutRounds.roundOf16[index].team1.score = newScore;
                               // Si el partido está completado y ambos scores están presentes, avanzar ganador
                               if (newData.tournament.knockoutRounds.roundOf16[index].completed && 
@@ -1604,7 +1667,7 @@ export default function AdminPanel() {
                             value={match.team2.score ?? ''}
                             onChange={(e) => {
                               const newData = { ...data };
-                              const newScore = parseInt(e.target.value) || null;
+                              const newScore = parseScoreInput(e.target.value);
                               newData.tournament.knockoutRounds.roundOf16[index].team2.score = newScore;
                               // Si el partido está completado y ambos scores están presentes, avanzar ganador
                               if (newData.tournament.knockoutRounds.roundOf16[index].completed && 
@@ -1628,7 +1691,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="Por Definir">Por Definir</option>
-                            {data.league.teams.map((team: Team) => (
+                            {data.league.teams.filter((team: Team) => team.name === match.team2.name || !usedInOtherR16.has(team.name)).map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -1678,11 +1741,12 @@ export default function AdminPanel() {
                             🗑️
                           </button>
                         </div>
-                      ))
+                      ); })
                     )}
                   </div>
-                  
-                  {/* Cuartos de Final */}
+                  )}
+
+                  {knockoutRoundTab === 'quarterFinals' && (
                   <div className="admin-subsection">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                       <h3>Cuartos de Final</h3>
@@ -1708,7 +1772,9 @@ export default function AdminPanel() {
                       </button>
                     </div>
                     {data.tournament.knockoutRounds.quarterFinals && data.tournament.knockoutRounds.quarterFinals.length > 0 && (
-                      data.tournament.knockoutRounds.quarterFinals.map((match: any, index: number) => (
+                      data.tournament.knockoutRounds.quarterFinals.map((match: any, index: number) => {
+                        const usedInOtherQF = getTeamsUsedInOtherMatches(data.tournament?.knockoutRounds?.quarterFinals, index);
+                        return (
                         <div key={match.id} className="admin-match" style={{ marginBottom: '10px' }}>
                           <select
                             value={match.team1.name}
@@ -1721,7 +1787,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="Por Definir">Por Definir</option>
-                            {data.league.teams.map((team: Team) => (
+                            {data.league.teams.filter((team: Team) => team.name === match.team1.name || !usedInOtherQF.has(team.name)).map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -1730,7 +1796,7 @@ export default function AdminPanel() {
                             value={match.team1.score ?? ''}
                             onChange={(e) => {
                               const newData = { ...data };
-                              const newScore = parseInt(e.target.value) || null;
+                              const newScore = parseScoreInput(e.target.value);
                               newData.tournament.knockoutRounds.quarterFinals[index].team1.score = newScore;
                               // Si el partido está completado y ambos scores están presentes, avanzar ganador
                               if (newData.tournament.knockoutRounds.quarterFinals[index].completed && 
@@ -1749,7 +1815,7 @@ export default function AdminPanel() {
                             value={match.team2.score ?? ''}
                             onChange={(e) => {
                               const newData = { ...data };
-                              const newScore = parseInt(e.target.value) || null;
+                              const newScore = parseScoreInput(e.target.value);
                               newData.tournament.knockoutRounds.quarterFinals[index].team2.score = newScore;
                               // Si el partido está completado y ambos scores están presentes, avanzar ganador
                               if (newData.tournament.knockoutRounds.quarterFinals[index].completed && 
@@ -1773,7 +1839,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="Por Definir">Por Definir</option>
-                            {data.league.teams.map((team: Team) => (
+                            {data.league.teams.filter((team: Team) => team.name === match.team2.name || !usedInOtherQF.has(team.name)).map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -1823,11 +1889,12 @@ export default function AdminPanel() {
                             🗑️
                           </button>
                         </div>
-                      ))
+                      ); })
                     )}
                   </div>
-                  
-                  {/* Semifinales */}
+                  )}
+
+                  {knockoutRoundTab === 'semiFinals' && (
                   <div className="admin-subsection">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                       <h3>Semifinales</h3>
@@ -1853,7 +1920,9 @@ export default function AdminPanel() {
                       </button>
                     </div>
                     {data.tournament.knockoutRounds.semiFinals && data.tournament.knockoutRounds.semiFinals.length > 0 && (
-                      data.tournament.knockoutRounds.semiFinals.map((match: any, index: number) => (
+                      data.tournament.knockoutRounds.semiFinals.map((match: any, index: number) => {
+                        const usedInOtherSF = getTeamsUsedInOtherMatches(data.tournament?.knockoutRounds?.semiFinals, index);
+                        return (
                         <div key={match.id} className="admin-match" style={{ marginBottom: '10px' }}>
                           <select
                             value={match.team1.name}
@@ -1866,7 +1935,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="Por Definir">Por Definir</option>
-                            {data.league.teams.map((team: Team) => (
+                            {data.league.teams.filter((team: Team) => team.name === match.team1.name || !usedInOtherSF.has(team.name)).map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -1875,7 +1944,7 @@ export default function AdminPanel() {
                             value={match.team1.score ?? ''}
                             onChange={(e) => {
                               const newData = { ...data };
-                              const newScore = parseInt(e.target.value) || null;
+                              const newScore = parseScoreInput(e.target.value);
                               newData.tournament.knockoutRounds.semiFinals[index].team1.score = newScore;
                               // Si el partido está completado y ambos scores están presentes, avanzar ganador
                               if (newData.tournament.knockoutRounds.semiFinals[index].completed && 
@@ -1894,7 +1963,7 @@ export default function AdminPanel() {
                             value={match.team2.score ?? ''}
                             onChange={(e) => {
                               const newData = { ...data };
-                              const newScore = parseInt(e.target.value) || null;
+                              const newScore = parseScoreInput(e.target.value);
                               newData.tournament.knockoutRounds.semiFinals[index].team2.score = newScore;
                               // Si el partido está completado y ambos scores están presentes, avanzar ganador
                               if (newData.tournament.knockoutRounds.semiFinals[index].completed && 
@@ -1918,7 +1987,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="Por Definir">Por Definir</option>
-                            {data.league.teams.map((team: Team) => (
+                            {data.league.teams.filter((team: Team) => team.name === match.team2.name || !usedInOtherSF.has(team.name)).map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -1968,11 +2037,12 @@ export default function AdminPanel() {
                             🗑️
                           </button>
                         </div>
-                      ))
+                      ); })
                     )}
                   </div>
-                  
-                  {/* Final */}
+                  )}
+
+                  {knockoutRoundTab === 'final' ? (
                   <div className="admin-subsection">
                     <h3>Final</h3>
                     {!data.tournament.knockoutRounds.final && (
@@ -2016,7 +2086,7 @@ export default function AdminPanel() {
                           value={data.tournament.knockoutRounds.final.team1.score ?? ''}
                           onChange={(e) => {
                             const newData = { ...data };
-                            newData.tournament.knockoutRounds.final.team1.score = parseInt(e.target.value) || null;
+                            newData.tournament.knockoutRounds.final.team1.score = parseScoreInput(e.target.value);
                             updateUpcomingMatchesFromTournament(newData);
                             setData(newData);
                           }}
@@ -2029,7 +2099,7 @@ export default function AdminPanel() {
                           value={data.tournament.knockoutRounds.final.team2.score ?? ''}
                           onChange={(e) => {
                             const newData = { ...data };
-                            newData.tournament.knockoutRounds.final.team2.score = parseInt(e.target.value) || null;
+                            newData.tournament.knockoutRounds.final.team2.score = parseScoreInput(e.target.value);
                             updateUpcomingMatchesFromTournament(newData);
                             setData(newData);
                           }}
@@ -2079,7 +2149,8 @@ export default function AdminPanel() {
                       </div>
                     )}
                   </div>
-                </div>
+                  ) : null}
+              </div>
               </>
             )}
             
@@ -2110,7 +2181,7 @@ export default function AdminPanel() {
                           value={match.team1.score ?? ''}
                           onChange={(e) => {
                             const newData = { ...data };
-                            const newScore = parseInt(e.target.value) || null;
+                            const newScore = parseScoreInput(e.target.value);
                             newData.tournament.knockoutRounds.roundOf16[index].team1.score = newScore;
                             // Si el partido está completado y ambos scores están presentes, avanzar ganador
                             if (newData.tournament.knockoutRounds.roundOf16[index].completed && 
@@ -2129,7 +2200,7 @@ export default function AdminPanel() {
                           value={match.team2.score ?? ''}
                           onChange={(e) => {
                             const newData = { ...data };
-                            const newScore = parseInt(e.target.value) || null;
+                            const newScore = parseScoreInput(e.target.value);
                             newData.tournament.knockoutRounds.roundOf16[index].team2.score = newScore;
                             // Si el partido está completado y ambos scores están presentes, avanzar ganador
                             if (newData.tournament.knockoutRounds.roundOf16[index].completed && 
@@ -2214,7 +2285,7 @@ export default function AdminPanel() {
                           value={match.team1.score ?? ''}
                           onChange={(e) => {
                             const newData = { ...data };
-                            const newScore = parseInt(e.target.value) || null;
+                            const newScore = parseScoreInput(e.target.value);
                             newData.tournament.knockoutRounds.quarterFinals[index].team1.score = newScore;
                             // Si el partido está completado y ambos scores están presentes, avanzar ganador
                             if (newData.tournament.knockoutRounds.quarterFinals[index].completed && 
@@ -2233,7 +2304,7 @@ export default function AdminPanel() {
                           value={match.team2.score ?? ''}
                           onChange={(e) => {
                             const newData = { ...data };
-                            const newScore = parseInt(e.target.value) || null;
+                            const newScore = parseScoreInput(e.target.value);
                             newData.tournament.knockoutRounds.quarterFinals[index].team2.score = newScore;
                             // Si el partido está completado y ambos scores están presentes, avanzar ganador
                             if (newData.tournament.knockoutRounds.quarterFinals[index].completed && 
@@ -2318,7 +2389,7 @@ export default function AdminPanel() {
                           value={match.team1.score ?? ''}
                           onChange={(e) => {
                             const newData = { ...data };
-                            const newScore = parseInt(e.target.value) || null;
+                            const newScore = parseScoreInput(e.target.value);
                             newData.tournament.knockoutRounds.semiFinals[index].team1.score = newScore;
                             // Si el partido está completado y ambos scores están presentes, avanzar ganador
                             if (newData.tournament.knockoutRounds.semiFinals[index].completed && 
@@ -2337,7 +2408,7 @@ export default function AdminPanel() {
                           value={match.team2.score ?? ''}
                           onChange={(e) => {
                             const newData = { ...data };
-                            const newScore = parseInt(e.target.value) || null;
+                            const newScore = parseScoreInput(e.target.value);
                             newData.tournament.knockoutRounds.semiFinals[index].team2.score = newScore;
                             // Si el partido está completado y ambos scores están presentes, avanzar ganador
                             if (newData.tournament.knockoutRounds.semiFinals[index].completed && 
@@ -2421,7 +2492,7 @@ export default function AdminPanel() {
                         value={data.tournament.knockoutRounds.final.team1.score ?? ''}
                         onChange={(e) => {
                           const newData = { ...data };
-                          newData.tournament.knockoutRounds.final.team1.score = parseInt(e.target.value) || null;
+                          newData.tournament.knockoutRounds.final.team1.score = parseScoreInput(e.target.value);
                           updateUpcomingMatchesFromTournament(newData);
                           setData(newData);
                         }}
@@ -2434,7 +2505,7 @@ export default function AdminPanel() {
                         value={data.tournament.knockoutRounds.final.team2.score ?? ''}
                         onChange={(e) => {
                           const newData = { ...data };
-                          newData.tournament.knockoutRounds.final.team2.score = parseInt(e.target.value) || null;
+                          newData.tournament.knockoutRounds.final.team2.score = parseScoreInput(e.target.value);
                           updateUpcomingMatchesFromTournament(newData);
                           setData(newData);
                         }}

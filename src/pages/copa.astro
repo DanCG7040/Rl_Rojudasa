@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Navigation from '../components/Navigation';
+import TournamentBracket from '../components/TournamentBracket';
 ---
 
 <Layout title="Copa - RL ROJUDASA">
@@ -9,8 +10,9 @@ import Navigation from '../components/Navigation';
   <main class="page-container">
     <div class="container">
       <h1>Copa</h1>
-      <p>Contenido de copa...</p>
+      <p class="copa-intro">Bracket del torneo de eliminación directa. Los partidos se configuran en el panel de administración.</p>
     </div>
+    <TournamentBracket client:load />
   </main>
   
   <footer class="footer">

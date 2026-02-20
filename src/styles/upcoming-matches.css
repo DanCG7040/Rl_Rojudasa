@@ -94,6 +94,29 @@
   overflow: hidden;
 }
 
+.match-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.match-watch-label {
+  display: block;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 107, 53, 0.2);
+  font-size: 0.9rem;
+  color: #9146ff;
+  font-weight: 600;
+  text-align: center;
+  transition: color 0.3s ease;
+}
+
+.match-card-link:hover .match-watch-label {
+  color: #b794f6;
+}
+
 .match-card::before {
   content: '';
   position: absolute;

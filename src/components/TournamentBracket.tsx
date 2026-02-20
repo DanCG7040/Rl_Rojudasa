@@ -76,16 +76,9 @@ export default function TournamentBracket() {
         // Usar tournament si existe, sino usar bracket antiguo
         if (data.tournament) {
           const tournamentType = data.tournament.type || (data.tournament.groups && data.tournament.groups.length > 0 ? 'groups' : 'direct');
-          if (tournamentType === 'groups' && data.tournament.groups && data.tournament.groups.length > 0) {
-            setTournamentData(data.tournament);
-            setShowGroups(true);
-          } else if (tournamentType === 'direct') {
-            setTournamentData(data.tournament);
-            setShowGroups(false);
-          } else if (data.bracket) {
-            setBracketData(data.bracket);
-            setShowGroups(false);
-          }
+          const hasGroups = data.tournament.groups && data.tournament.groups.length > 0;
+          setTournamentData(data.tournament);
+          setShowGroups(tournamentType === 'groups' && hasGroups);
         } else if (data.bracket) {
           setBracketData(data.bracket);
           setShowGroups(false);
@@ -264,15 +257,28 @@ export default function TournamentBracket() {
     );
   }
 
-  // Si es eliminación directa (sin grupos), mostrar solo fases eliminatorias
-  if (tournamentData && tournamentData.type === 'direct') {
+  // Si es eliminación directa (sin grupos) o hay tournament pero sin grupos, mostrar solo fases eliminatorias
+  if (tournamentData && (tournamentData.type === 'direct' || !showGroups)) {
+    const ko = tournamentData.knockoutRounds || {};
+    const hasR16 = ko.roundOf16 && ko.roundOf16.length > 0;
+    const hasQuarters = ko.quarterFinals && ko.quarterFinals.length > 0;
+    const hasSemis = ko.semiFinals && ko.semiFinals.length > 0;
+    const hasFinal = ko.final && (ko.final.team1?.name !== 'Por Definir' || ko.final.team2?.name !== 'Por Definir');
+    const hasAnyKnockout = hasR16 || hasQuarters || hasSemis || hasFinal;
+
     return (
       <section className="tournament-bracket-section" id="bracket">
         <div className="container">
           <h2 className="section-title">TORNEO - ELIMINACIÓN DIRECTA</h2>
+          {!hasAnyKnockout ? (
+            <div className="bracket-empty">
+              <p>Aún no hay partidos del bracket configurados.</p>
+              <p>Configura octavos, cuartos, semifinales y final en el <a href="/admin">panel de administración</a> (pestaña Torneo).</p>
+            </div>
+          ) : (
           <div className="bracket-wrapper">
             {/* Round of 16 */}
-            {tournamentData.knockoutRounds.roundOf16 && tournamentData.knockoutRounds.roundOf16.length > 0 && (
+            {hasR16 && (
               <div className="bracket-stage">
                 <div className="stage-header">
                   <h3>OCTAVOS DE FINAL</h3>
@@ -286,7 +292,7 @@ export default function TournamentBracket() {
             )}
 
             {/* Quarter-finals */}
-            {tournamentData.knockoutRounds.quarterFinals && tournamentData.knockoutRounds.quarterFinals.length > 0 && (
+            {hasQuarters && (
               <div className="bracket-stage">
                 <div className="stage-header">
                   <h3>CUARTOS DE FINAL</h3>
@@ -300,7 +306,7 @@ export default function TournamentBracket() {
             )}
 
             {/* Semi-finals */}
-            {tournamentData.knockoutRounds.semiFinals && tournamentData.knockoutRounds.semiFinals.length > 0 && (
+            {hasSemis && (
               <div className="bracket-stage">
                 <div className="stage-header">
                   <h3>SEMIFINALES</h3>
@@ -326,6 +332,7 @@ export default function TournamentBracket() {
               </div>
             )}
           </div>
+          )}
         </div>
       </section>
     );

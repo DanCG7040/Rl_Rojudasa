@@ -181,6 +181,37 @@
   color: #b0b0b0;
 }
 
+.bracket-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #b0b0b0;
+  background: rgba(26, 26, 46, 0.6);
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 107, 53, 0.4);
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.bracket-empty p {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.bracket-empty p:last-child {
+  margin-bottom: 0;
+}
+
+.bracket-empty a {
+  color: #ff6b35;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.bracket-empty a:hover {
+  text-decoration: underline;
+}
+
 /* Líneas conectoras */
 .bracket-stage:not(:last-child)::after {
   content: '';

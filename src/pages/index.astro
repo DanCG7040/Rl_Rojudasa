@@ -11,6 +11,28 @@ import UpcomingMatches from '../components/UpcomingMatches';
   <Navigation client:load />
   <Hero client:load />
   <UpcomingMatches client:load />
+
+  <section class="social-section">
+    <div class="container">
+      <h2 class="social-title">Síguenos</h2>
+      <div class="social-links">
+        <a href="https://www.instagram.com/real_takercup?igsh=MWltdHNvN3ZiYTk4Mg==" target="_blank" rel="noopener noreferrer" class="social-link" aria-label="Instagram">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+          </svg>
+          <span>Instagram</span>
+        </a>
+        <a href="https://www.youtube.com/channel/UC4teQCaX9vxZfaPh0nYLiOA" target="_blank" rel="noopener noreferrer" class="social-link" aria-label="YouTube">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+          <span>YouTube</span>
+        </a>
+      </div>
+    </div>
+  </section>
   
   <footer class="footer">
     <div class="container">
@@ -19,11 +41,62 @@ import UpcomingMatches from '../components/UpcomingMatches';
   </footer>
 
   <a href="https://wa.me/3004201706?text=Hola,%20quiero%20participar%20en%20el%20torneo" class="participate-btn-floating" target="_blank" rel="noopener noreferrer">
-    <img src="/images/whatsapp.png" alt="WhatsApp" class="whatsapp-icon"> Participa
+    Participa
   </a>
 </Layout>
 
 <style>
+  .social-section {
+    padding: 48px 20px;
+    background: #0a0a0a;
+    border-top: 1px solid rgba(255, 107, 53, 0.2);
+    text-align: center;
+  }
+
+  .social-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.25rem;
+    color: #ffd23f;
+    margin-bottom: 24px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .social-links {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .social-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 24px;
+    background: rgba(255, 107, 53, 0.1);
+    border: 2px solid rgba(255, 107, 53, 0.4);
+    border-radius: 12px;
+    color: #fff;
+    text-decoration: none;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+  }
+
+  .social-link:hover {
+    background: rgba(255, 107, 53, 0.25);
+    border-color: #ff6b35;
+    color: #ffd23f;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.3);
+  }
+
+  .social-link svg {
+    flex-shrink: 0;
+  }
+
   .footer {
     padding: 40px 0;
     background: #0a0a0a;
@@ -37,6 +110,19 @@ import UpcomingMatches from '../components/UpcomingMatches';
     margin: 0;
   }
 
+  @media (max-width: 768px) {
+    .social-section {
+      padding: 36px 16px;
+    }
+    .social-links {
+      gap: 20px;
+    }
+    .social-link {
+      padding: 12px 20px;
+      font-size: 0.9rem;
+    }
+  }
+
   .participate-btn-floating {
     position: fixed;
     bottom: 30px;
@@ -45,7 +131,7 @@ import UpcomingMatches from '../components/UpcomingMatches';
     align-items: center;
     gap: 8px;
     padding: 15px 30px;
-    background: linear-gradient(135deg, #25D366, #128C7E);
+    background: linear-gradient(135deg, #ff6b35, #ffd23f);
     color: #ffffff;
     text-decoration: none;
     border-radius: 30px;
@@ -53,22 +139,22 @@ import UpcomingMatches from '../components/UpcomingMatches';
     font-weight: 700;
     font-size: 1rem;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+    box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
     z-index: 999;
     animation: pulse 2s ease-in-out infinite;
   }
 
   .participate-btn-floating:hover {
     transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 25px rgba(37, 211, 102, 0.5);
+    box-shadow: 0 6px 25px rgba(255, 107, 53, 0.5);
   }
 
   @keyframes pulse {
     0%, 100% {
-      box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+      box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
     }
     50% {
-      box-shadow: 0 4px 25px rgba(37, 211, 102, 0.6);
+      box-shadow: 0 4px 25px rgba(255, 107, 53, 0.6);
     }
   }
 

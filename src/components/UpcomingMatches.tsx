@@ -33,6 +33,8 @@ export default function UpcomingMatches() {
     setCurrentIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
   };
 
+  const TWITCH_URL = 'https://www.twitch.tv/dancg7040';
+
   const visibleMatches = matches.slice(
     currentIndex * itemsPerView,
     currentIndex * itemsPerView + itemsPerView
@@ -50,7 +52,14 @@ export default function UpcomingMatches() {
           )}
           <div className={`matches-grid ${showCarousel ? 'carousel' : ''}`}>
             {visibleMatches.map((match) => (
-              <div key={match.id} className="match-card">
+              <a
+                key={match.id}
+                href={TWITCH_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="match-card match-card-link"
+                title="Ver partido en Twitch"
+              >
                 <div className="match-type">{match.type}</div>
                 <div className="match-teams">
                   <div className="team">{match.team1}</div>
@@ -61,7 +70,8 @@ export default function UpcomingMatches() {
                   <span className="date">{match.date}</span>
                   <span className="time">{match.time}</span>
                 </div>
-              </div>
+                <span className="match-watch-label">▶ Ver en Twitch</span>
+              </a>
             ))}
           </div>
           {showCarousel && (
