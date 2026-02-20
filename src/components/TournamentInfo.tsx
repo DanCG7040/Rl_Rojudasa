@@ -148,7 +148,7 @@ export default function TournamentInfo() {
       {openModal !== null && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeModal}>×</button>
+            <button type="button" className="modal-close" onClick={closeModal} aria-label="Cerrar">×</button>
             <div className="modal-header">
               <div className="modal-icon">
                 {infoCards[openModal].iconImage ? (
@@ -187,6 +187,9 @@ export default function TournamentInfo() {
                 </div>
               )}
             </div>
+            <div className="modal-footer">
+              <button type="button" className="modal-close-btn" onClick={closeModal}>Cerrar</button>
+            </div>
           </div>
         </div>
       )}
@@ -195,9 +198,12 @@ export default function TournamentInfo() {
       {showStadiumImage && stadiumImageData && (
         <div className="stadium-image-overlay" onClick={closeStadiumImage}>
           <div className="stadium-image-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeStadiumImage}>×</button>
+            <button className="modal-close" onClick={closeStadiumImage} aria-label="Cerrar">×</button>
             <img src={stadiumImageData.image} alt={stadiumImageData.name} className="stadium-image-full" loading="lazy" decoding="async" />
             <p className="stadium-image-caption">{stadiumImageData.name}</p>
+            <div className="modal-footer">
+              <button type="button" className="modal-close-btn" onClick={closeStadiumImage}>Cerrar</button>
+            </div>
           </div>
         </div>
       )}
