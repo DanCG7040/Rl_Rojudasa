@@ -5,6 +5,7 @@ export default function Navigation() {
   const [activeSection, setActiveSection] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
   const [currentPage, setCurrentPage] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     // Detectar en qué página estamos
@@ -77,7 +78,7 @@ export default function Navigation() {
 
   const handleLogoClick = () => {
     const currentPath = window.location.pathname;
-    
+    setMenuOpen(false);
     if (currentPath !== '/' && currentPath !== '') {
       window.location.href = '/';
     } else {
@@ -85,45 +86,58 @@ export default function Navigation() {
     }
   };
 
+  const handleLinkClick = () => setMenuOpen(false);
+
   return (
-    <nav className={`navigation ${isScrolled ? 'scrolled' : ''}`}>
+    <nav className={`navigation ${isScrolled ? 'scrolled' : ''} ${menuOpen ? 'nav-menu-open' : ''}`}>
       <div className="nav-container">
         <div className="nav-logo" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
           RL ROJUDASA
         </div>
+        <button
+          type="button"
+          className="nav-toggle"
+          aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          <span className="nav-toggle-bar" />
+          <span className="nav-toggle-bar" />
+          <span className="nav-toggle-bar" />
+        </button>
         <div className="nav-links">
           <a 
             href="/informacion"
             className={currentPage === 'informacion' ? 'active' : ''}
-            onClick={(e) => handleNavClick(e, 'informacion')}
+            onClick={(e) => { handleNavClick(e, 'informacion'); handleLinkClick(); }}
           >
             Información
           </a>
           <a 
             href="/liga"
             className={currentPage === 'liga' ? 'active' : ''}
-            onClick={(e) => handleNavClick(e, 'liga')}
+            onClick={(e) => { handleNavClick(e, 'liga'); handleLinkClick(); }}
           >
             Liga
           </a>
           <a 
             href="/copa"
             className={currentPage === 'copa' ? 'active' : ''}
-            onClick={(e) => handleNavClick(e, 'copa')}
+            onClick={(e) => { handleNavClick(e, 'copa'); handleLinkClick(); }}
           >
             Copa
           </a>
           <a 
             href="/historico"
             className={currentPage === 'historico' ? 'active' : ''}
-            onClick={(e) => handleNavClick(e, 'historico')}
+            onClick={(e) => { handleNavClick(e, 'historico'); handleLinkClick(); }}
           >
             Histórico
           </a>
           <a 
             href="/acerca-de-nosotros"
             className={currentPage === 'acerca-de-nosotros' ? 'active' : ''}
-            onClick={(e) => handleNavClick(e, 'acerca-de-nosotros')}
+            onClick={(e) => { handleNavClick(e, 'acerca-de-nosotros'); handleLinkClick(); }}
           >
             Acerca de nosotros
           </a>

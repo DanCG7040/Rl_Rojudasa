@@ -129,6 +129,8 @@ export default function TournamentInfo() {
                       className={`card-icon-img pixel-icon-img ${card.iconImage.includes('Liga.png') ? 'card-icon-img-no-bg' : ''}`}
                       width={64}
                       height={64}
+                      loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <PixelIcon name={card.icon} size={64} />
@@ -156,6 +158,8 @@ export default function TournamentInfo() {
                     className="modal-icon-img"
                     width={64}
                     height={64}
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <PixelIcon name={infoCards[openModal].icon} size={64} />
@@ -175,6 +179,8 @@ export default function TournamentInfo() {
                     src={infoCards[openModal].modalImage!.image}
                     alt={infoCards[openModal].modalImage!.name}
                     className="modal-stadium-img modal-stadium-img-clickable"
+                    loading="lazy"
+                    decoding="async"
                     onClick={(e) => openStadiumImage(infoCards[openModal].modalImage!.image, infoCards[openModal].modalImage!.name, e)}
                     title="Ver imagen"
                   />
@@ -190,7 +196,7 @@ export default function TournamentInfo() {
         <div className="stadium-image-overlay" onClick={closeStadiumImage}>
           <div className="stadium-image-modal" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={closeStadiumImage}>×</button>
-            <img src={stadiumImageData.image} alt={stadiumImageData.name} className="stadium-image-full" />
+            <img src={stadiumImageData.image} alt={stadiumImageData.name} className="stadium-image-full" loading="lazy" decoding="async" />
             <p className="stadium-image-caption">{stadiumImageData.name}</p>
           </div>
         </div>

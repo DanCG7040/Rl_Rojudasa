@@ -1,5 +1,6 @@
 .hero {
   min-height: 70vh;
+  min-height: 70dvh;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -7,7 +8,7 @@
   position: relative;
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
   overflow: hidden;
-  padding-top: 80px;
+  padding: clamp(70px, 12vw, 100px) 16px 40px;
 }
 
 .hero::before {

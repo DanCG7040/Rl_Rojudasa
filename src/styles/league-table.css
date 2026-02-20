@@ -1,7 +1,8 @@
 .league-table-section {
-  padding: 100px 0 60px 0;
+  padding: clamp(70px, 12vw, 100px) 0 clamp(40px, 8vw, 60px);
   background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
   min-height: calc(100vh - 80px);
+  min-height: calc(100dvh - 80px);
 }
 
 .league-table-section .section-title {
@@ -97,10 +98,22 @@
 @media (max-width: 768px) {
   .league-table {
     font-size: 0.85rem;
+    min-width: 600px;
   }
 
   .league-table th,
   .league-table td {
-    padding: 10px 5px;
+    padding: 10px 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .league-table-section {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .table-wrapper {
+    border-radius: 8px;
+    margin: 0 -4px;
   }
 }

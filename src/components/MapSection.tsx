@@ -54,6 +54,8 @@ export default function MapSection() {
               src={currentRandomMap.image} 
               alt={currentRandomMap.name} 
               className="map-display-image"
+              loading="lazy"
+              decoding="async"
               onError={handleImageError}
             />
             <p className="map-display-name">{currentRandomMap.name}</p>
