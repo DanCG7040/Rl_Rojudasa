@@ -17,6 +17,8 @@ export default function Navigation() {
       setCurrentPage('copa');
     } else if (path === '/acerca-de-nosotros' || path === '/acerca-de-nosotros/') {
       setCurrentPage('acerca-de-nosotros');
+    } else if (path === '/historico' || path === '/historico/') {
+      setCurrentPage('historico');
     } else {
       setCurrentPage('');
     }
@@ -110,6 +112,13 @@ export default function Navigation() {
             onClick={(e) => handleNavClick(e, 'copa')}
           >
             Copa
+          </a>
+          <a 
+            href="/historico"
+            className={currentPage === 'historico' ? 'active' : ''}
+            onClick={(e) => handleNavClick(e, 'historico')}
+          >
+            Histórico
           </a>
           <a 
             href="/acerca-de-nosotros"
