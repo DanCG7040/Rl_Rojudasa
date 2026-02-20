@@ -15,6 +15,7 @@ pnpm-debug.log*
 .env
 .env.production
 .env.local
+.env.example
 
 # macOS-specific files
 .DS_Store
@@ -29,4 +30,4 @@ pnpm-debug.log*
 # Documentación sensible
 DEPLOY.md
 ADMIN.md
-VERCEL.md
+VERCEL.md   
