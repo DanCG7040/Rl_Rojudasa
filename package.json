@@ -2,7 +2,9 @@
   "name": "rl-rojudasa-tournament",
   "version": "1.0.0",
   "type": "module",
-  "engines": { "node": ">=20.0.0" },
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
