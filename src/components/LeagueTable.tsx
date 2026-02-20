@@ -19,7 +19,7 @@ export default function LeagueTable() {
   const [sortBy, setSortBy] = useState<string>('position');
 
   useEffect(() => {
-    fetch('/api/data.json')
+    fetch('/api/data.json', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => setTeams(data.league.teams))
       .catch(err => console.error('Error loading league:', err));

@@ -63,7 +63,7 @@ export default function TournamentBracket() {
   const [leagueTeams, setLeagueTeams] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch('/api/data.json')
+    fetch('/api/data.json', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data.league?.teams) {
@@ -269,11 +269,11 @@ export default function TournamentBracket() {
     return (
       <section className="tournament-bracket-section" id="bracket">
         <div className="container">
-          <h2 className="section-title">TORNEO - ELIMINACIÓN DIRECTA</h2>
+       
           {!hasAnyKnockout ? (
             <div className="bracket-empty">
               <p>Aún no hay partidos del bracket configurados.</p>
-              <p>Configura octavos, cuartos, semifinales y final en el <a href="/admin">panel de administración</a> (pestaña Torneo).</p>
+             
             </div>
           ) : (
           <div className="bracket-wrapper">

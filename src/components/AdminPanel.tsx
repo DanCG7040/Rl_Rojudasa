@@ -60,7 +60,9 @@ export default function AdminPanel() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'tournament' | 'league' | 'upcoming' | 'teams'>('tournament');
+  const [activeTab, setActiveTab] = useState<'tournament' | 'league' | 'upcoming' | 'teams' | 'historio'>('tournament');
+  const [historyData, setHistoryData] = useState<any>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [newResult, setNewResult] = useState({ team1: '', team2: '', goals1: '', goals2: '' });
@@ -100,7 +102,7 @@ export default function AdminPanel() {
   const loadData = async () => {
     try {
       setMessage('Cargando datos...');
-      const response = await fetch('/api/data.json');
+      const response = await fetch('/api/data.json', { cache: 'no-store' });
       
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -155,6 +157,77 @@ export default function AdminPanel() {
     } catch (error) {
       console.error('Error loading data:', error);
       setMessage(`⚠️ Error al cargar los datos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    }
+  };
+
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch('/api/history.json', { cache: 'no-store' });
+      const json = await res.json().catch(() => ({}));
+      if (json.error) {
+        setHistoryData(null);
+        return;
+      }
+      setHistoryData(json);
+    } catch {
+      setHistoryData(null);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleResetTournament = async () => {
+    if (!confirm('¿Eliminar datos de la copa/torneo? Los datos actuales de la copa se guardarán en Histórico. Se vacían bracket y próximos partidos; se mantienen equipos.')) return;
+    if (!data?.league || !Array.isArray(data.league.teams)) {
+      setMessage('⚠️ No hay equipos cargados. Carga la página e inténtalo de nuevo.');
+      return;
+    }
+    setLoading(true);
+    setMessage('Guardando copa en Histórico y reiniciando...');
+    try {
+      const payload = {
+        bracket: data.bracket,
+        league: data.league,
+        upcomingMatches: data.upcomingMatches,
+        tournament: data.tournament ?? { type: 'groups', groups: [], knockoutRounds: { roundOf16: [], quarterFinals: [], semiFinals: [], final: null } }
+      };
+      const res = await fetch('/api/reset-tournament', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) {
+        await loadData();
+        setMessage('✅ Sí, se guardó. La copa se guardó en Histórico. Puedes verla en la pestaña «Histórico» de este panel o en el menú → Histórico → Mostrar Copa.');
+      } else {
+        setMessage(`❌ No se guardó. ${json.error || json.details || 'Error al reiniciar'}. Revisa la conexión o inténtalo de nuevo.`);
+      }
+    } catch (e) {
+      setMessage(`❌ No se guardó. Error: ${e instanceof Error ? e.message : 'Error de conexión'}. Revisa la consola (F12).`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (!confirm('¿Eliminar todo el histórico? Solo quedará el torneo actual. No se puede deshacer.')) return;
+    setLoading(true);
+    setMessage('Limpiando histórico...');
+    try {
+      const res = await fetch('/api/clear-history', { method: 'POST' });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) {
+        setHistoryData(null);
+        setMessage(`✅ ${json.message || 'Histórico limpiado.'}`);
+      } else {
+        setMessage(`⚠️ ${json.error || 'Error al limpiar'}`);
+      }
+    } catch (e) {
+      setMessage(`⚠️ Error: ${e instanceof Error ? e.message : 'Error de conexión'}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1192,7 +1265,7 @@ export default function AdminPanel() {
     <div className="admin-panel">
       <div className="admin-header">
         <h1>Panel de Administración - RL ROJUDASA</h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button 
             onClick={() => window.location.href = '/'} 
             className="preview-btn"
@@ -1204,7 +1277,42 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      <div className="admin-tabs">
+      {/* Aviso fijo: se guardó o error */}
+        {message && (
+          <div
+            className={`admin-message ${message.includes('✅') ? 'success' : 'info'}`}
+            style={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 100,
+              margin: '0 20px 20px',
+              padding: '16px 20px',
+              borderRadius: '10px',
+              fontSize: '1rem',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+            }}
+          >
+            {message}
+            <button
+              type="button"
+              onClick={() => setMessage('')}
+              style={{
+                marginLeft: '16px',
+                padding: '4px 12px',
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                borderRadius: '6px',
+                color: 'inherit',
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
+
+        <div className="admin-tabs">
         <button 
           className={activeTab === 'tournament' ? 'active' : ''} 
           onClick={() => setActiveTab('tournament')}
@@ -1229,6 +1337,12 @@ export default function AdminPanel() {
         >
           📅 Próximos Partidos
         </button>
+        <button 
+          className={activeTab === 'historio' ? 'active' : ''} 
+          onClick={() => { setActiveTab('historio'); loadHistory(); }}
+        >
+          📜 Histórico
+        </button>
       </div>
 
       <div className="admin-content">
@@ -1237,6 +1351,14 @@ export default function AdminPanel() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2>🏆 Torneo</h2>
               <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={handleResetTournament}
+                  disabled={loading}
+                  style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '6px', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: '600' }}
+                  title="Vacía bracket y copa. Mantiene equipos. El torneo anterior queda en Histórico."
+                >
+                  🗑️ Eliminar datos de la copa
+                </button>
                 <button 
                   onClick={() => window.open('/', '_blank')} 
                   className="preview-btn"
@@ -2559,31 +2681,33 @@ export default function AdminPanel() {
         {activeTab === 'league' && (
           <div className="admin-section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0 }}>🏆 Tabla de Liga</h2>
+              <h2 style={{ margin: 0 }}>🏆 Tabla General</h2>
               <button 
-                onClick={() => {
-                  if (confirm('¿Estás seguro de limpiar las estadísticas de la liga? Esto reseteará puntos, partidos jugados y goles, pero mantendrá los equipos.')) {
-                    const newData = { ...data };
-                    // Solo resetear estadísticas, mantener equipos con sus nombres y colores
-                    newData.league.teams = newData.league.teams.map((team: Team) => ({
-                      ...team,
-                      played: 0,
-                      wins: 0,
-                      draws: 0,
-                      losses: 0,
-                      goalsFor: 0,
-                      goalsAgainst: 0,
-                      goalDifference: 0,
-                      points: 0
-                    }));
-                    setData(newData);
-                    setMessage('✅ Estadísticas de la liga limpiadas correctamente');
+                onClick={async () => {
+                  if (!confirm('¿Limpiar la Tabla General? Los datos actuales pasarán a la Tabla de histórico (página Histórico → Mostrar Liga) y la Tabla General quedará a cero.')) return;
+                  setLoading(true);
+                  setMessage('Guardando en Histórico y limpiando tabla...');
+                  try {
+                    const res = await fetch('/api/snapshot-and-clear-league', { method: 'POST' });
+                    const json = await res.json().catch(() => ({}));
+                    if (res.ok && json.success) {
+                      await loadData();
+                      setMessage('✅ Sí, se guardó. La Tabla General se guardó en Histórico. Puedes verla en la pestaña «Histórico» de este panel o en el menú → Histórico → Mostrar Liga.');
+                    } else {
+                      setMessage(`❌ No se guardó. ${json.error || json.message || 'Error al limpiar'}. Inténtalo de nuevo.`);
+                    }
+                  } catch (e) {
+                    setMessage(`❌ No se guardó. Error: ${e instanceof Error ? e.message : 'Error de conexión'}.`);
+                  } finally {
+                    setLoading(false);
                   }
                 }}
+                disabled={loading}
                 className="remove-btn"
                 style={{ padding: '10px 20px', fontSize: '0.9rem' }}
+                title="Los datos de la Tabla General pasan a la Tabla de histórico."
               >
-                🗑️ Limpiar Tabla
+                🗑️ Limpiar Tabla General
               </button>
             </div>
             
@@ -2846,17 +2970,106 @@ export default function AdminPanel() {
           </div>
         )}
 
+        {activeTab === 'historio' && (
+          <div className="admin-section">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <h2 style={{ margin: 0 }}>📜 Histórico – Último torneo</h2>
+              <button
+                onClick={handleClearHistory}
+                disabled={loading}
+                style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '6px', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: '600' }}
+                title="Elimina todo el histórico; solo queda el torneo actual."
+              >
+                🗑️ Limpiar histórico
+              </button>
+            </div>
+            <p style={{ color: '#aaa', marginBottom: '20px' }}>Se guarda al pulsar &quot;Limpiar tabla&quot; (Liga) o &quot;Eliminar datos de la copa&quot; (Copa). Se actualiza cada vez que vuelves a pulsar el botón.</p>
+            {historyLoading ? (
+              <p style={{ color: '#ffd23f' }}>Cargando...</p>
+            ) : (() => {
+              const copaBracket = historyData?.copa?.bracket;
+              const copaKnockout = historyData?.copa?.tournament?.knockoutRounds;
+              const roundConfig = [
+                { title: 'Ronda previa', matches: [...(copaBracket?.koPlayoffs || [])] },
+                { title: 'Octavos de final', matches: [...(copaBracket?.roundOf16 || []), ...(copaKnockout?.roundOf16 || [])] },
+                { title: 'Cuartos de final', matches: [...(copaBracket?.quarterFinals || []), ...(copaKnockout?.quarterFinals || [])] },
+                { title: 'Semifinales', matches: [...(copaBracket?.semiFinals || []), ...(copaKnockout?.semiFinals || [])] },
+                { title: 'Final', matches: [...(copaBracket?.final ? [copaBracket.final] : []), ...(copaKnockout?.final ? [copaKnockout.final] : [])] }
+              ];
+              const copaByRounds = roundConfig.map(({ title, matches }) => ({
+                title,
+                matches: matches.filter((m: any) => m && (m.team1?.name !== 'Por Definir' || m.team2?.name !== 'Por Definir'))
+              })).filter(r => r.matches.length > 0);
+              const hasCopa = copaByRounds.length > 0;
+              const hasLiga = (historyData?.liga?.league?.teams?.length ?? 0) > 0;
+              if (!hasCopa && !hasLiga) return <p style={{ color: '#888' }}>No hay histórico todavía.</p>;
+              return (
+              <>
+                {hasCopa && (
+                  <div className="admin-subsection" style={{ background: '#1a1a2e', padding: '20px', borderRadius: '8px', marginBottom: '24px', border: '2px solid #ff6b35' }}>
+                    <h3 style={{ color: '#ffd23f', marginTop: 0 }}>🏆 Histórico Copa (último al pulsar &quot;Eliminar datos de la copa&quot;)</h3>
+                    {copaByRounds.map(({ title, matches }) => (
+                      <div key={title} style={{ marginBottom: '20px' }}>
+                        <h4 style={{ color: '#ff6b35', fontSize: '0.95rem', marginBottom: '8px', marginTop: 0 }}>{title}</h4>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                          {matches.map((m: any) => (
+                            <div key={m.id || m.team1?.name + m.team2?.name} style={{ background: '#0a0a0a', padding: '10px 14px', borderRadius: '6px', minWidth: '200px', border: '1px solid #333' }}>
+                              <div style={{ color: '#fff' }}>{m.team1?.name ?? 'TBD'} {m.team1?.score != null ? m.team1.score : '-'} – {m.team2?.score != null ? m.team2.score : '-'} {m.team2?.name ?? 'TBD'}</div>
+                              {m.date && <div style={{ color: '#888', fontSize: '0.85rem' }}>{m.date}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {hasLiga && historyData.liga.league?.teams?.length > 0 && (
+                  <div className="admin-subsection" style={{ background: '#1a1a2e', padding: '20px', borderRadius: '8px', border: '2px solid #ff6b35' }}>
+                    <h3 style={{ color: '#ffd23f', marginTop: 0 }}>📊 Tabla de histórico (última Tabla General guardada)</h3>
+                    <table className="admin-table" style={{ width: '100%' }}>
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Equipo</th>
+                          <th>PJ</th>
+                          <th>G</th>
+                          <th>E</th>
+                          <th>P</th>
+                          <th>GF</th>
+                          <th>GC</th>
+                          <th>DG</th>
+                          <th>Pts</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(historyData.liga.league.teams as Team[]).map((t) => (
+                          <tr key={t.name}>
+                            <td>{t.position}</td>
+                            <td>{t.name}</td>
+                            <td>{t.played}</td>
+                            <td>{t.wins}</td>
+                            <td>{t.draws}</td>
+                            <td>{t.losses}</td>
+                            <td>{t.goalsFor}</td>
+                            <td>{t.goalsAgainst}</td>
+                            <td>{t.goalDifference}</td>
+                            <td><strong>{t.points}</strong></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            );})()}
+          </div>
+        )}
+
         <div className="admin-actions">
           <button onClick={handleSave} disabled={loading} className="save-btn">
             {loading ? 'Guardando...' : '💾 Guardar Cambios'}
           </button>
         </div>
-
-        {message && (
-          <div className={`admin-message ${message.includes('✅') ? 'success' : 'info'}`}>
-            {message}
-          </div>
-        )}
       </div>
 
       {/* Modal para añadir/editar equipo */}

@@ -16,7 +16,7 @@ export default function UpcomingMatches() {
   const itemsPerView = 4;
 
   useEffect(() => {
-    fetch('/api/data.json')
+    fetch('/api/data.json', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => setMatches(data.upcomingMatches))
       .catch(err => console.error('Error loading matches:', err));
