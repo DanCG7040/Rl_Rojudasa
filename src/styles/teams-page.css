@@ -1,0 +1,241 @@
+.teams-page-section {
+  padding: clamp(80px, 12vw, 120px) 0 clamp(60px, 10vw, 80px);
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+  min-height: 100vh;
+}
+
+.teams-page-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  color: #fff;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.teams-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.teams-page-card {
+  background: rgba(26, 26, 46, 0.8);
+  border: 2px solid rgba(255, 107, 53, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.teams-page-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(255, 107, 53, 0.2);
+}
+
+.teams-page-card-bar {
+  height: 8px;
+  width: 100%;
+}
+
+.teams-page-card-body {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.teams-page-card-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.teams-page-card-dot-sec {
+  width: 12px;
+  height: 12px;
+}
+
+.teams-page-card-name {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Modal detalle equipo */
+.teams-page-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.teams-page-modal {
+  background: #1a1a2e;
+  border: 2px solid #ff6b35;
+  border-radius: 16px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  padding: 28px 24px 24px;
+}
+
+.teams-page-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 107, 53, 0.5);
+  background: rgba(255, 107, 53, 0.2);
+  color: #ff6b35;
+  font-size: 1.8rem;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s, color 0.3s;
+}
+
+.teams-page-modal-close:hover {
+  background: #ff6b35;
+  color: #fff;
+}
+
+.teams-page-modal-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  color: #fff;
+  margin: 0 0 24px;
+  padding-bottom: 12px;
+  border-bottom: 3px solid;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.teams-page-modal-title span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.teams-page-modal-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.teams-page-modal-stat {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  border: 1px solid rgba(255, 107, 53, 0.2);
+}
+
+.teams-page-modal-stat-value {
+  display: block;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffd23f;
+  margin-bottom: 4px;
+}
+
+.teams-page-modal-stat-label {
+  font-size: 0.9rem;
+  color: #b0b0b0;
+}
+
+.teams-page-modal-stadium {
+  margin-bottom: 24px;
+}
+
+.teams-page-modal-stadium-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  color: #ff6b35;
+  margin: 0 0 10px;
+}
+
+.teams-page-modal-stadium-name {
+  color: #b0b0b0;
+  font-size: 1rem;
+  margin: 0 0 12px;
+}
+
+.teams-page-modal-stadium-img-wrap {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  background: #0a0a0a;
+}
+
+.teams-page-modal-stadium-img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
+.teams-page-modal-no-photo {
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
+  margin: 0;
+}
+
+.teams-page-modal-btn {
+  display: block;
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #ff6b35, #ff8c5a);
+  border: 2px solid rgba(255, 107, 53, 0.6);
+  border-radius: 10px;
+  color: #fff;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.teams-page-modal-btn:hover {
+  background: linear-gradient(135deg, #ff8c5a, #ffd23f);
+  color: #000;
+}
+
+@media (max-width: 768px) {
+  .teams-page-modal {
+    padding: 24px 20px 20px;
+  }
+  .teams-page-modal-title {
+    font-size: 1.25rem;
+  }
+  .teams-page-modal-stat-value {
+    font-size: 1.6rem;
+  }
+  .teams-page-modal-stadium-img {
+    max-height: 180px;
+  }
+}

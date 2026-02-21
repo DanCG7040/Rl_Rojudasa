@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import Navigation from '../components/Navigation';
 import Hero from '../components/Hero';
 import UpcomingMatches from '../components/UpcomingMatches';
+import SponsorsCarousel from '../components/SponsorsCarousel';
 ---
 
 <Layout title="Ligas y Copas Competitivas">
@@ -31,7 +32,9 @@ import UpcomingMatches from '../components/UpcomingMatches';
       </div>
     </div>
   </section>
-  
+
+  <SponsorsCarousel client:visible />
+
   <footer class="footer">
     <div class="container">
       <p>&copy; 2026 RL ROJUDASA. Todos los derechos reservados.</p>

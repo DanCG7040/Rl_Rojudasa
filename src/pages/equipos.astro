@@ -1,0 +1,30 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navigation from '../components/Navigation';
+import TeamsPage from '../components/TeamsPage';
+---
+
+<Layout title="Equipos - RL ROJUDASA">
+  <Navigation client:load />
+  <TeamsPage client:load />
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 RL ROJUDASA. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+</Layout>
+
+<style>
+  .footer {
+    padding: 40px 0;
+    background: #0a0a0a;
+    border-top: 1px solid rgba(255, 107, 53, 0.2);
+    text-align: center;
+  }
+  .footer p {
+    color: #b0b0b0;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+</style>

@@ -20,6 +20,10 @@ export default function Navigation() {
       setCurrentPage('acerca-de-nosotros');
     } else if (path === '/historico' || path === '/historico/') {
       setCurrentPage('historico');
+    } else if (path === '/equipos' || path === '/equipos/') {
+      setCurrentPage('equipos');
+    } else if (path === '/' || path === '') {
+      setCurrentPage('');
     } else {
       setCurrentPage('');
     }
@@ -65,9 +69,12 @@ export default function Navigation() {
     e.preventDefault();
     const currentPath = window.location.pathname;
     const isOnPage = currentPath !== '/' && currentPath !== '';
-    
+    if (page === 'equipos') {
+      window.location.href = '/equipos';
+      handleLinkClick();
+      return;
+    }
     if (isOnPage && page !== currentPath.replace('/', '')) {
-      // Si estamos en una página y queremos ir a otra, navegar normalmente
       window.location.href = `/${page}`;
     } else if (page && page !== 'home') {
       window.location.href = `/${page}`;
@@ -112,6 +119,13 @@ export default function Navigation() {
             onClick={(e) => { handleNavClick(e, 'informacion'); handleLinkClick(); }}
           >
             Información
+          </a>
+          <a 
+            href="/equipos"
+            className={currentPage === 'equipos' ? 'active' : ''}
+            onClick={(e) => { handleNavClick(e, 'equipos'); handleLinkClick(); }}
+          >
+            Equipos
           </a>
           <a 
             href="/liga"
