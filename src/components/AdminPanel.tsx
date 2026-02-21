@@ -818,6 +818,19 @@ export default function AdminPanel() {
     setData(newData);
   };
 
+  const parseUpcomingDate = (date: string, time: string): number => {
+    const d = (date || '').trim();
+    if (!d) return Number.MAX_SAFE_INTEGER;
+    const parsed = new Date(d + ((time || '').trim() ? ' ' + (time || '').trim() : ''));
+    const ts = parsed.getTime();
+    return Number.isNaN(ts) ? Number.MAX_SAFE_INTEGER : ts;
+  };
+
+  const sortedUpcomingWithIndex = (data?.upcomingMatches || []).map((match: any, originalIndex: number) => ({ match, originalIndex })).sort(
+    (a: { match: any; originalIndex: number }, b: { match: any; originalIndex: number }) =>
+      parseUpcomingDate(a.match.date, a.match.time) - parseUpcomingDate(b.match.date, b.match.time)
+  );
+
   const generateLeagueMatches = () => {
     const teams = data.league.teams;
     if (!teams || teams.length < 2) {
@@ -3034,11 +3047,11 @@ export default function AdminPanel() {
             <p style={{ color: '#b0b0b0', fontSize: '0.9rem', marginBottom: '16px' }}>
               &quot;Generar partidos de liga&quot; crea todos los enfrentamientos entre equipos (ida y vuelta) y sustituye los partidos de tipo Liga que hubiera. Luego puedes editar fecha y hora de cada uno.
             </p>
-            {data.upcomingMatches.map((match: any, index: number) => (
+            {sortedUpcomingWithIndex.map(({ match, originalIndex }: { match: any; originalIndex: number }) => (
               <div key={match.id} className="admin-match">
                 <select
                   value={match.team1}
-                  onChange={(e) => updateUpcomingMatch(index, 'team1', e.target.value)}
+                  onChange={(e) => updateUpcomingMatch(originalIndex, 'team1', e.target.value)}
                   style={{ flex: 1, minWidth: '150px' }}
                 >
                   <option value="">Selecciona Equipo 1</option>
@@ -3049,7 +3062,7 @@ export default function AdminPanel() {
                 <span>VS</span>
                 <select
                   value={match.team2}
-                  onChange={(e) => updateUpcomingMatch(index, 'team2', e.target.value)}
+                  onChange={(e) => updateUpcomingMatch(originalIndex, 'team2', e.target.value)}
                   style={{ flex: 1, minWidth: '150px' }}
                 >
                   <option value="">Selecciona Equipo 2</option>
@@ -3060,24 +3073,24 @@ export default function AdminPanel() {
                 <input
                   type="text"
                   value={match.date}
-                  onChange={(e) => updateUpcomingMatch(index, 'date', e.target.value)}
+                  onChange={(e) => updateUpcomingMatch(originalIndex, 'date', e.target.value)}
                   placeholder="Fecha"
                 />
                 <input
                   type="text"
                   value={match.time}
-                  onChange={(e) => updateUpcomingMatch(index, 'time', e.target.value)}
+                  onChange={(e) => updateUpcomingMatch(originalIndex, 'time', e.target.value)}
                   placeholder="Hora"
                 />
                 <select
                   value={match.type}
-                  onChange={(e) => updateUpcomingMatch(index, 'type', e.target.value)}
+                  onChange={(e) => updateUpcomingMatch(originalIndex, 'type', e.target.value)}
                 >
                   <option value="Liga">Liga</option>
                   <option value="Copa">Copa</option>
                 </select>
                 <button
-                  onClick={() => removeUpcomingMatch(index)}
+                  onClick={() => removeUpcomingMatch(originalIndex)}
                   className="remove-btn"
                   title="Eliminar partido"
                 >

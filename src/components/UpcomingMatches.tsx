@@ -10,6 +10,19 @@ interface Match {
   type: string;
 }
 
+function parseMatchDate(m: Match): number {
+  const d = (m.date || '').trim();
+  const t = (m.time || '').trim();
+  if (!d) return Number.MAX_SAFE_INTEGER;
+  const parsed = new Date(d + (t ? ' ' + t : ''));
+  const ts = parsed.getTime();
+  return Number.isNaN(ts) ? Number.MAX_SAFE_INTEGER : ts;
+}
+
+function sortMatchesByDate(list: Match[]): Match[] {
+  return [...list].sort((a, b) => parseMatchDate(a) - parseMatchDate(b));
+}
+
 export default function UpcomingMatches() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -18,7 +31,10 @@ export default function UpcomingMatches() {
   useEffect(() => {
     fetch('/api/data.json', { cache: 'no-store' })
       .then(res => res.json())
-      .then(data => setMatches(data.upcomingMatches))
+      .then(data => {
+        const list = Array.isArray(data.upcomingMatches) ? data.upcomingMatches : [];
+        setMatches(sortMatchesByDate(list));
+      })
       .catch(err => console.error('Error loading matches:', err));
   }, []);
 
