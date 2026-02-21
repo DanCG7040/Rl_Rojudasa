@@ -818,6 +818,35 @@ export default function AdminPanel() {
     setData(newData);
   };
 
+  const generateLeagueMatches = () => {
+    const teams = data.league.teams;
+    if (!teams || teams.length < 2) {
+      setMessage('⚠️ Necesitas al menos 2 equipos en la pestaña Equipos para generar partidos de liga.');
+      return;
+    }
+    const newData = { ...data };
+    const countLigaBefore = newData.upcomingMatches.filter((m: any) => m.type === 'Liga').length;
+    newData.upcomingMatches = newData.upcomingMatches.filter((m: any) => m.type !== 'Liga');
+    const baseId = Date.now();
+    let added = 0;
+    for (let i = 0; i < teams.length; i++) {
+      for (let j = 0; j < teams.length; j++) {
+        if (i === j) continue;
+        newData.upcomingMatches.push({
+          id: `up${baseId}-${i}-${j}`,
+          team1: teams[i].name,
+          team2: teams[j].name,
+          date: '',
+          time: '',
+          type: 'Liga'
+        });
+        added++;
+      }
+    }
+    setData(newData);
+    setMessage(`✅ Se generaron ${added} partidos de liga (ida y vuelta). Se eliminaron ${countLigaBefore} partidos de liga anteriores. Ajusta fechas y horas si quieres.`);
+  };
+
   // ========== FUNCIONES PARA TORNEO CON GRUPOS ==========
   
   // Calcular clasificación de un grupo
@@ -2991,12 +3020,20 @@ export default function AdminPanel() {
 
         {activeTab === 'upcoming' && (
           <div className="admin-section">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
               <h2>📅 Partidos Próximos</h2>
-              <button onClick={addUpcomingMatch} className="add-btn">
-                ➕ Añadir Partido
-              </button>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button onClick={generateLeagueMatches} className="add-btn" style={{ background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6', color: '#60a5fa' }} title="Genera todos los partidos de liga: cada equipo enfrenta a todos los demás, ida y vuelta">
+                  🏟️ Generar partidos de liga (ida y vuelta)
+                </button>
+                <button onClick={addUpcomingMatch} className="add-btn">
+                  ➕ Añadir Partido
+                </button>
+              </div>
             </div>
+            <p style={{ color: '#b0b0b0', fontSize: '0.9rem', marginBottom: '16px' }}>
+              &quot;Generar partidos de liga&quot; crea todos los enfrentamientos entre equipos (ida y vuelta) y sustituye los partidos de tipo Liga que hubiera. Luego puedes editar fecha y hora de cada uno.
+            </p>
             {data.upcomingMatches.map((match: any, index: number) => (
               <div key={match.id} className="admin-match">
                 <select
