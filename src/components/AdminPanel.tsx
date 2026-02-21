@@ -6,13 +6,51 @@ import '../styles/admin.css';
 const TEAM_COLORS = [
   '#ff6b35', '#4ade80', '#38bdf8', '#f472b6', '#fbbf24',
   '#a78bfa', '#fb923c', '#2dd4bf', '#f87171', '#60a5fa',
-  '#34d399', '#c084fc', '#fcd34d', '#22d3ee', '#fb7185'
+  '#34d399', '#c084fc', '#fcd34d', '#22d3ee', '#fb7185',
+  '#10b981', '#ec4899', '#8b5cf6', '#06b6d4', '#eab308',
+  '#ef4444', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
+  '#d946ef', '#0ea5e9', '#e11d48', '#0d9488', '#7c3aed'
 ];
+
+// Paleta en grid: columna 0 = grises, columnas 1-11 = espectro de tonos (8 filas cada una)
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  const r = Math.round(f(0) * 255), g = Math.round(f(8) * 255), b = Math.round(f(4) * 255);
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+const GRAY_SCALE = ['#ffffff', '#e8e8e8', '#c0c0c0', '#989898', '#707070', '#505050', '#303030', '#181818'];
+function buildColorPaletteGrid(): string[][] {
+  const rows = 8;
+  const cols = 12;
+  const grid: string[][] = [];
+  const hues = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300]; // 11 hue columns
+  const lightnings = [92, 78, 65, 52, 42, 34, 26, 18]; // top to bottom
+  for (let r = 0; r < rows; r++) {
+    const row: string[] = [];
+    row.push(GRAY_SCALE[r]);
+    for (let c = 0; c < hues.length; c++) {
+      row.push(hslToHex(hues[c], 78, lightnings[r]));
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+const COLOR_PALETTE_GRID = buildColorPaletteGrid();
 
 interface Team {
   position: number;
   name: string;
   color?: string;
+  colorSecondary?: string;
+  stadiumName?: string;
+  stadiumImage?: string;
+  leaguesWon?: number;
+  cupsWon?: number;
   played: number;
   wins: number;
   draws: number;
@@ -311,6 +349,11 @@ export default function AdminPanel() {
             position: Number(team.position) || 0,
             name: String(team.name || ''),
             color: String(team.color || TEAM_COLORS[0]),
+            colorSecondary: team.colorSecondary != null ? String(team.colorSecondary) : undefined,
+            stadiumName: team.stadiumName != null ? String(team.stadiumName) : undefined,
+            stadiumImage: team.stadiumImage != null ? String(team.stadiumImage) : undefined,
+            leaguesWon: team.leaguesWon != null ? Number(team.leaguesWon) : undefined,
+            cupsWon: team.cupsWon != null ? Number(team.cupsWon) : undefined,
             played: Number(team.played) || 0,
             wins: Number(team.wins) || 0,
             draws: Number(team.draws) || 0,
@@ -674,6 +717,11 @@ export default function AdminPanel() {
       position: 0,
       name: '',
       color: defaultColor,
+      colorSecondary: '',
+      stadiumName: '',
+      stadiumImage: '',
+      leaguesWon: 0,
+      cupsWon: 0,
       played: 0,
       wins: 0,
       draws: 0,
@@ -2881,26 +2929,55 @@ export default function AdminPanel() {
               </button>
             </div>
             <div className="admin-note" style={{ background: '#1e3a5f', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-              <strong>💡 Nota:</strong> Añade o edita equipos aquí. Puedes incluir los nombres de los jugadores. 
-              Los equipos añadidos aparecerán en la tabla de liga.
+              <strong>💡 Nota:</strong> Añade o edita equipos aquí. Asigna color (ruleta o paleta), nombre del estadio y foto (URL). 
+              Los equipos aparecen en la tabla de liga y abajo con su color y estadio.
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+            <h3 style={{ color: '#ffd23f', marginBottom: '16px' }}>📋 Listado de equipos (color y estadio)</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
               {data.league.teams.map((team: Team, index: number) => (
                 <div key={index} style={{ 
                   background: '#1a1a2e', 
-                  padding: '20px', 
-                  borderRadius: '8px',
+                  padding: '0',
+                  borderRadius: '12px',
                   border: `2px solid ${team.color || '#ff6b35'}`,
-                  borderLeft: `6px solid ${team.color || '#ff6b35'}`
+                  overflow: 'hidden'
                 }}>
-                  <h3 style={{ marginTop: 0, color: '#ff6b35' }}>{team.name}</h3>
-                  <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
-                    <button onClick={() => editTeam(team)} className="add-btn" style={{ flex: 1 }}>
-                      ✏️ Editar
-                    </button>
-                    <button onClick={() => deleteTeam(index)} className="remove-btn" style={{ flex: 1 }}>
-                      🗑️ Eliminar
-                    </button>
+                  <div style={{ height: '6px', display: 'flex', width: '100%' }}>
+                    <span style={{ flex: 1, background: team.color || '#ff6b35', height: '100%' }} />
+                    {team.colorSecondary && <span style={{ width: '28%', background: team.colorSecondary, height: '100%' }} />}
+                  </div>
+                  <div style={{ padding: '16px' }}>
+                    <h3 style={{ margin: '0 0 12px', color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: team.color || '#ff6b35', flexShrink: 0 }} />
+                      {team.colorSecondary && <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: team.colorSecondary, flexShrink: 0 }} />}
+                      {team.name}
+                    </h3>
+                    {(team.stadiumName || team.stadiumImage) && (
+                      <div style={{ marginBottom: '12px', padding: '10px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px' }}>
+                        {team.stadiumImage && (
+                          <img 
+                            src={team.stadiumImage} 
+                            alt={team.stadiumName || 'Estadio'} 
+                            style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }}
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        )}
+                        {team.stadiumName && (
+                          <div style={{ color: '#b0b0b0', fontSize: '0.9rem' }}>🏟️ {team.stadiumName}</div>
+                        )}
+                      </div>
+                    )}
+                    {!team.stadiumName && !team.stadiumImage && (
+                      <div style={{ color: '#666', fontSize: '0.85rem', marginBottom: '12px' }}>Sin estadio asignado</div>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => editTeam(team)} className="add-btn" style={{ flex: 1 }}>
+                        ✏️ Editar
+                      </button>
+                      <button onClick={() => deleteTeam(index)} className="remove-btn" style={{ flex: 1 }}>
+                        🗑️ Eliminar
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -3236,8 +3313,10 @@ export default function AdminPanel() {
             background: '#1a1a2e',
             padding: '30px',
             borderRadius: '10px',
-            maxWidth: '500px',
+            maxWidth: '520px',
             width: '90%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             border: '2px solid #ff6b35'
           }}>
             <h2 style={{ marginTop: 0 }}>{editingTeam.name ? 'Editar Equipo' : 'Nuevo Equipo'}</h2>
@@ -3253,24 +3332,136 @@ export default function AdminPanel() {
             </div>
             <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', marginBottom: '5px', color: '#fff' }}>Color del equipo</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                {TEAM_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setEditingTeam({ ...editingTeam!, color })}
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: color,
-                      border: editingTeam?.color === color ? '3px solid #fff' : '2px solid #666',
-                      cursor: 'pointer',
-                      boxShadow: editingTeam?.color === color ? '0 0 0 2px #ff6b35' : 'none'
-                    }}
-                    title={color}
-                  />
-                ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '8px', marginBottom: '12px' }}>
+                <input
+                  type="color"
+                  value={editingTeam.color || '#ff6b35'}
+                  onChange={(e) => setEditingTeam({ ...editingTeam!, color: e.target.value })}
+                  style={{ width: '48px', height: '48px', padding: 0, border: '2px solid #666', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
+                  title="Elige cualquier color"
+                />
+                <span style={{ color: '#b0b0b0', fontSize: '0.9rem' }}>Ruleta de color</span>
+              </div>
+              <div style={{ marginTop: '8px' }}>
+                <span style={{ color: '#b0b0b0', fontSize: '0.85rem', display: 'block', marginBottom: '6px' }}>Paleta de colores</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '2px', maxWidth: '100%', background: '#0a0a0a', padding: '6px', borderRadius: '8px', border: '1px solid #333' }}>
+                  {COLOR_PALETTE_GRID.map((row, ri) =>
+                    row.map((color, ci) => (
+                      <button
+                        key={`${ri}-${ci}`}
+                        type="button"
+                        onClick={() => setEditingTeam({ ...editingTeam!, color })}
+                        style={{
+                          width: '100%',
+                          aspectRatio: '1',
+                          minWidth: '18px',
+                          minHeight: '18px',
+                          padding: 0,
+                          background: color,
+                          border: editingTeam?.color === color ? '2px solid #7dd3fc' : '1px solid #1a1a1a',
+                          borderRadius: '2px',
+                          cursor: 'pointer',
+                          boxShadow: editingTeam?.color === color ? '0 0 0 1px #0ea5e9' : 'none'
+                        }}
+                        title={color}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', color: '#fff' }}>Color secundario (opcional)</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '8px', marginBottom: '12px' }}>
+                <input
+                  type="color"
+                  value={editingTeam.colorSecondary || '#ffd23f'}
+                  onChange={(e) => setEditingTeam({ ...editingTeam!, colorSecondary: e.target.value })}
+                  style={{ width: '48px', height: '48px', padding: 0, border: '2px solid #666', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
+                  title="Color secundario"
+                />
+                <span style={{ color: '#b0b0b0', fontSize: '0.9rem' }}>Ruleta</span>
+                <button
+                  type="button"
+                  onClick={() => setEditingTeam({ ...editingTeam!, colorSecondary: '' })}
+                  style={{ padding: '6px 12px', fontSize: '0.85rem', background: 'rgba(255,255,255,0.1)', border: '1px solid #555', color: '#b0b0b0', borderRadius: '6px', cursor: 'pointer' }}
+                >
+                  Quitar secundario
+                </button>
+              </div>
+              <div style={{ marginTop: '8px' }}>
+                <span style={{ color: '#b0b0b0', fontSize: '0.85rem', display: 'block', marginBottom: '6px' }}>Paleta secundaria</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '2px', maxWidth: '100%', background: '#0a0a0a', padding: '6px', borderRadius: '8px', border: '1px solid #333' }}>
+                  {COLOR_PALETTE_GRID.map((row, ri) =>
+                    row.map((color, ci) => (
+                      <button
+                        key={`sec-${ri}-${ci}`}
+                        type="button"
+                        onClick={() => setEditingTeam({ ...editingTeam!, colorSecondary: color })}
+                        style={{
+                          width: '100%',
+                          aspectRatio: '1',
+                          minWidth: '18px',
+                          minHeight: '18px',
+                          padding: 0,
+                          background: color,
+                          border: editingTeam?.colorSecondary === color ? '2px solid #7dd3fc' : '1px solid #1a1a1a',
+                          borderRadius: '2px',
+                          cursor: 'pointer',
+                          boxShadow: editingTeam?.colorSecondary === color ? '0 0 0 1px #0ea5e9' : 'none'
+                        }}
+                        title={color}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', color: '#fff' }}>Nombre del estadio</label>
+              <input
+                type="text"
+                value={editingTeam.stadiumName || ''}
+                onChange={(e) => setEditingTeam({ ...editingTeam, stadiumName: e.target.value })}
+                style={{ width: '100%', padding: '10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff' }}
+                placeholder="Ej: Estadio Nacional"
+              />
+            </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', color: '#fff' }}>Foto del estadio (URL)</label>
+              <input
+                type="url"
+                value={editingTeam.stadiumImage || ''}
+                onChange={(e) => setEditingTeam({ ...editingTeam, stadiumImage: e.target.value })}
+                style={{ width: '100%', padding: '10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff' }}
+                placeholder="https://ejemplo.com/imagen-estadio.jpg"
+              />
+              {editingTeam.stadiumImage && (
+                <div style={{ marginTop: '8px' }}>
+                  <img src={editingTeam.stadiumImage} alt="Vista previa estadio" style={{ maxWidth: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #333' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '15px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', color: '#fff' }}>Ligas ganadas</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={editingTeam.leaguesWon ?? 0}
+                  onChange={(e) => setEditingTeam({ ...editingTeam, leaguesWon: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                  style={{ width: '100%', padding: '10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', color: '#fff' }}>Copas ganadas</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={editingTeam.cupsWon ?? 0}
+                  onChange={(e) => setEditingTeam({ ...editingTeam, cupsWon: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                  style={{ width: '100%', padding: '10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff' }}
+                />
               </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
