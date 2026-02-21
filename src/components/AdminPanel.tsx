@@ -103,6 +103,7 @@ export default function AdminPanel() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [editingTeamIndex, setEditingTeamIndex] = useState<number | null>(null);
   const [newResult, setNewResult] = useState({ team1: '', team2: '', goals1: '', goals2: '' });
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
@@ -711,6 +712,7 @@ export default function AdminPanel() {
   };
 
   const addTeam = () => {
+    setEditingTeamIndex(null);
     const usedColors = new Set(data.league.teams.map((t: Team) => t.color).filter(Boolean));
     const defaultColor = TEAM_COLORS.find(c => !usedColors.has(c)) || TEAM_COLORS[data.league.teams.length % TEAM_COLORS.length];
     setEditingTeam({
@@ -741,11 +743,11 @@ export default function AdminPanel() {
     }
 
     const newData = { ...data };
-    const existingIndex = newData.league.teams.findIndex((t: Team) => t.name === editingTeam!.name);
+    const isEditing = editingTeamIndex !== null && editingTeamIndex >= 0 && editingTeamIndex < newData.league.teams.length;
 
-    if (existingIndex >= 0) {
-      // Actualizar equipo existente
-      newData.league.teams[existingIndex] = { ...editingTeam };
+    if (isEditing) {
+      // Actualizar equipo existente por índice (aunque se haya cambiado el nombre)
+      newData.league.teams[editingTeamIndex!] = { ...editingTeam };
     } else {
       // Añadir nuevo equipo
       newData.league.teams.push({ ...editingTeam });
@@ -763,10 +765,12 @@ export default function AdminPanel() {
     setData(newData);
     setShowTeamModal(false);
     setEditingTeam(null);
+    setEditingTeamIndex(null);
     setMessage('✅ Equipo guardado correctamente');
   };
 
-  const editTeam = (team: Team) => {
+  const editTeam = (team: Team, index: number) => {
+    setEditingTeamIndex(index);
     setEditingTeam({ ...team });
     setShowTeamModal(true);
   };
@@ -2971,7 +2975,7 @@ export default function AdminPanel() {
                       <div style={{ color: '#666', fontSize: '0.85rem', marginBottom: '12px' }}>Sin estadio asignado</div>
                     )}
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => editTeam(team)} className="add-btn" style={{ flex: 1 }}>
+                      <button onClick={() => editTeam(team, index)} className="add-btn" style={{ flex: 1 }}>
                         ✏️ Editar
                       </button>
                       <button onClick={() => deleteTeam(index)} className="remove-btn" style={{ flex: 1 }}>
@@ -3466,7 +3470,7 @@ export default function AdminPanel() {
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button 
-                onClick={() => { setShowTeamModal(false); setEditingTeam(null); }}
+                onClick={() => { setShowTeamModal(false); setEditingTeam(null); setEditingTeamIndex(null); }}
                 className="remove-btn"
               >
                 Cancelar
