@@ -29,6 +29,8 @@ export const GET: APIRoute = async ({ request }) => {
         },
         league: { teams: [] },
         upcomingMatches: [],
+        leagueMatches: [],
+        currentLeagueId: 'default',
         tournament: {
           type: 'groups',
           groups: [],

@@ -23,6 +23,8 @@ const defaultTournamentData = {
   },
   league: { teams: [] },
   upcomingMatches: [],
+  leagueMatches: [],
+  currentLeagueId: 'default',
   tournament: {
     type: 'groups' as const,
     groups: [],

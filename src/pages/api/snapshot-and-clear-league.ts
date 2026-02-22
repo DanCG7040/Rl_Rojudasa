@@ -57,10 +57,13 @@ export const POST: APIRoute = async () => {
       goalDifference: 0,
       points: 0
     }));
+    const newLeagueId = `liga-${new Date().toISOString().slice(0, 7)}-${Date.now()}`;
     const cleared = {
       bracket: snapshot.bracket,
       league: { teams: clearedTeams },
       upcomingMatches: snapshot.upcomingMatches ?? [],
+      leagueMatches: snapshot.leagueMatches ?? [],
+      currentLeagueId: newLeagueId,
       tournament: snapshot.tournament ?? {
         type: 'groups',
         groups: [],

@@ -109,6 +109,7 @@ export default function AdminPanel() {
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [tournamentType, setTournamentType] = useState<'groups' | 'direct'>('groups');
   const [knockoutRoundTab, setKnockoutRoundTab] = useState<'roundOf16' | 'quarterFinals' | 'semiFinals' | 'final'>('roundOf16');
+  const [addGoalInput, setAddGoalInput] = useState<Record<string, { author: 'local' | 'away'; minute: string }>>({});
 
   // Permite 0 como marcador (parseInt(x)||null convierte 0 en null)
   const parseScoreInput = (value: string): number | null => {
@@ -169,6 +170,12 @@ export default function AdminPanel() {
       }
       if (!json.upcomingMatches) {
         json.upcomingMatches = [];
+      }
+      if (!json.leagueMatches) {
+        json.leagueMatches = [];
+      }
+      if (json.currentLeagueId == null) {
+        json.currentLeagueId = 'default';
       }
       if (!json.tournament) {
         json.tournament = {
@@ -372,7 +379,25 @@ export default function AdminPanel() {
           date: String(match.date || ''),
           time: String(match.time || ''),
           type: String(match.type || 'Liga')
-        })) : []
+        })) : [],
+        leagueMatches: Array.isArray(data.leagueMatches) ? data.leagueMatches.map((m: any) => ({
+          id: String(m.id || `lm${Date.now()}`),
+          leagueId: String(m.leagueId ?? data.currentLeagueId ?? 'default'),
+          matchday: m.matchday != null ? Number(m.matchday) : undefined,
+          localTeam: String(m.localTeam ?? ''),
+          awayTeam: String(m.awayTeam ?? ''),
+          date: String(m.date ?? ''),
+          status: m.status === 'jugado' ? 'jugado' : 'por_jugar',
+          stadium: String(m.stadium ?? ''),
+          homeScore: m.homeScore != null ? Number(m.homeScore) : null,
+          awayScore: m.awayScore != null ? Number(m.awayScore) : null,
+          repeticion: m.repeticion != null ? String(m.repeticion) : '',
+          historial: m.historial && typeof m.historial === 'object' ? {
+            local: Array.isArray(m.historial.local) ? m.historial.local.map((x: any) => Number(x)).filter((x: number) => !isNaN(x)) : [],
+            away: Array.isArray(m.historial.away) ? m.historial.away.map((x: any) => Number(x)).filter((x: number) => !isNaN(x)) : []
+          } : undefined
+        })) : [],
+        currentLeagueId: String(data.currentLeagueId ?? 'default')
       };
       
       // Incluir tournament si existe
@@ -566,86 +591,73 @@ export default function AdminPanel() {
     setLoading(false);
   };
 
-  // Función para calcular estadísticas automáticamente desde un resultado
-  const applyMatchResultToLeague = (team1Name: string, team1Score: number, team2Name: string, team2Score: number) => {
-    if (!team1Name || !team2Name || team1Score === null || team2Score === null) return;
-
-    const newData = { ...data };
-    let team1 = newData.league.teams.find((t: Team) => t.name === team1Name);
-    let team2 = newData.league.teams.find((t: Team) => t.name === team2Name);
-
-    // Si no existen los equipos, crearlos
+  // Aplica el resultado de un partido a la tabla de liga sobre el objeto data (mutación). Usar para no perder otros cambios al actualizar.
+  const applyMatchResultToLeagueData = (dataObj: any, team1Name: string, team1Score: number, team2Name: string, team2Score: number) => {
+    if (!dataObj?.league?.teams || !team1Name || !team2Name || team1Score == null || team2Score == null) return;
+    const teams = dataObj.league.teams;
+    let team1 = teams.find((t: Team) => t.name === team1Name);
+    let team2 = teams.find((t: Team) => t.name === team2Name);
     if (!team1) {
-      team1 = {
-        position: 0,
-        name: team1Name,
-        played: 0,
-        wins: 0,
-        draws: 0,
-        losses: 0,
-        goalsFor: 0,
-        goalsAgainst: 0,
-        goalDifference: 0,
-        points: 0
-      };
-      newData.league.teams.push(team1);
+      team1 = { position: 0, name: team1Name, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 };
+      teams.push(team1);
     }
-
     if (!team2) {
-      team2 = {
-        position: 0,
-        name: team2Name,
-        played: 0,
-        wins: 0,
-        draws: 0,
-        losses: 0,
-        goalsFor: 0,
-        goalsAgainst: 0,
-        goalDifference: 0,
-        points: 0
-      };
-      newData.league.teams.push(team2);
+      team2 = { position: 0, name: team2Name, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 };
+      teams.push(team2);
     }
-
-    // Actualizar estadísticas del equipo 1
     team1.played += 1;
     team1.goalsFor += team1Score;
     team1.goalsAgainst += team2Score;
     team1.goalDifference = team1.goalsFor - team1.goalsAgainst;
-
-    // Actualizar estadísticas del equipo 2
     team2.played += 1;
     team2.goalsFor += team2Score;
     team2.goalsAgainst += team1Score;
     team2.goalDifference = team2.goalsFor - team2.goalsAgainst;
-
-    // Determinar resultado
     if (team1Score > team2Score) {
-      team1.wins += 1;
-      team2.losses += 1;
-      team1.points += 3;
+      team1.wins += 1; team2.losses += 1; team1.points += 3;
     } else if (team2Score > team1Score) {
-      team2.wins += 1;
-      team1.losses += 1;
-      team2.points += 3;
+      team2.wins += 1; team1.losses += 1; team2.points += 3;
     } else {
-      team1.draws += 1;
-      team2.draws += 1;
-      team1.points += 1;
-      team2.points += 1;
+      team1.draws += 1; team2.draws += 1; team1.points += 1; team2.points += 1;
     }
+    teams.sort((a: Team, b: Team) => (b.points !== a.points ? b.points - a.points : b.goalDifference - a.goalDifference));
+    teams.forEach((t: Team, i: number) => { t.position = i + 1; });
+  };
 
-    // Recalcular posiciones
-    newData.league.teams.sort((a: Team, b: Team) => {
-      if (b.points !== a.points) return b.points - a.points;
-      return b.goalDifference - a.goalDifference;
-    });
-    newData.league.teams.forEach((team: Team, i: number) => {
-      team.position = i + 1;
-    });
+  // Resta el resultado de un partido de la tabla (inverso de applyMatchResultToLeagueData). Para actualizar tabla al cambiar cronología.
+  const removeMatchResultFromLeagueData = (dataObj: any, team1Name: string, team1Score: number, team2Name: string, team2Score: number) => {
+    if (!dataObj?.league?.teams || !team1Name || !team2Name || team1Score == null || team2Score == null) return;
+    const teams = dataObj.league.teams;
+    const team1 = teams.find((t: Team) => t.name === team1Name);
+    const team2 = teams.find((t: Team) => t.name === team2Name);
+    if (!team1 || !team2) return;
+    team1.played = Math.max(0, team1.played - 1);
+    team1.goalsFor = Math.max(0, team1.goalsFor - team1Score);
+    team1.goalsAgainst = Math.max(0, team1.goalsAgainst - team2Score);
+    team1.goalDifference = team1.goalsFor - team1.goalsAgainst;
+    team2.played = Math.max(0, team2.played - 1);
+    team2.goalsFor = Math.max(0, team2.goalsFor - team2Score);
+    team2.goalsAgainst = Math.max(0, team2.goalsAgainst - team1Score);
+    team2.goalDifference = team2.goalsFor - team2.goalsAgainst;
+    if (team1Score > team2Score) {
+      team1.wins = Math.max(0, team1.wins - 1); team2.losses = Math.max(0, team2.losses - 1); team1.points = Math.max(0, team1.points - 3);
+    } else if (team2Score > team1Score) {
+      team2.wins = Math.max(0, team2.wins - 1); team1.losses = Math.max(0, team1.losses - 1); team2.points = Math.max(0, team2.points - 3);
+    } else {
+      team1.draws = Math.max(0, team1.draws - 1); team2.draws = Math.max(0, team2.draws - 1); team1.points = Math.max(0, team1.points - 1); team2.points = Math.max(0, team2.points - 1);
+    }
+    teams.sort((a: Team, b: Team) => (b.points !== a.points ? b.points - a.points : b.goalDifference - a.goalDifference));
+    teams.forEach((t: Team, i: number) => { t.position = i + 1; });
+  };
 
+  const applyMatchResultToLeague = (team1Name: string, team1Score: number, team2Name: string, team2Score: number) => {
+    if (!team1Name || !team2Name || team1Score === null || team2Score === null) return;
+    const newData = { ...data };
+    if (!newData.league?.teams) return;
+    applyMatchResultToLeagueData(newData, team1Name, team1Score, team2Name, team2Score);
     setData(newData);
     setMessage('✅ Estadísticas actualizadas automáticamente desde el resultado del partido');
+    return;
   };
 
   const updateBracketMatch = (stage: string, index: number, field: string, value: any) => {
@@ -858,6 +870,202 @@ export default function AdminPanel() {
     }
     setData(newData);
     setMessage(`✅ Se generaron ${added} partidos de liga (ida y vuelta). Se eliminaron ${countLigaBefore} partidos de liga anteriores. Ajusta fechas y horas si quieres.`);
+  };
+
+  // Round-robin doble: PRIMERA VUELTA = cada par de equipos se enfrenta UNA vez. SEGUNDA VUELTA = mismos enfrentamientos con local/visitante intercambiado.
+  // Así cada equipo enfrenta a cada otro exactamente DOS veces en total (una de local, una de visitante). Local/visitante equilibrado por vuelta.
+  const generateLeagueMatchdays = () => {
+    const teams = data.league.teams;
+    if (!teams || teams.length < 2) {
+      setMessage('⚠️ Necesitas al menos 2 equipos en la pestaña Equipos para generar las jornadas.');
+      return;
+    }
+    const n = teams.length;
+    const isEven = n % 2 === 0;
+    const newData = { ...data };
+    const currentId = newData.currentLeagueId ?? 'default';
+    const baseId = `lm${Date.now()}`;
+    const newMatches: any[] = [];
+    let matchId = 0;
+
+    const pushFirstLeg = (matchday: number, localIdx: number, awayIdx: number) => {
+      newMatches.push({
+        id: `${baseId}-${matchId++}`,
+        leagueId: currentId,
+        matchday,
+        localTeam: teams[localIdx].name,
+        awayTeam: teams[awayIdx].name,
+        date: 'POR DEFINIR',
+        status: 'por_jugar',
+        stadium: teams[localIdx].stadiumName ?? '',
+        homeScore: null,
+        awayScore: null,
+        repeticion: '',
+        historial: { local: [], away: [] }
+      });
+    };
+
+    // --- PRIMERA VUELTA: exactamente un partido por cada par (i,j); cada equipo juega una vez por jornada; local/visitante equilibrado ---
+    const roundsFirstLeg = isEven ? n - 1 : n;
+    const firstLegByMatchday: { local: number; away: number }[][] = Array.from({ length: roundsFirstLeg }, () => []);
+
+    if (isEven) {
+      // n par: generar todos los pares (i,j) con i<j y asignarlos a n-1 rondas de n/2 partidos cada una (cada equipo juega una vez por ronda).
+      type Pair = [number, number];
+      const allPairs: Pair[] = [];
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) allPairs.push([i, j]);
+      const used = new Set<string>();
+      const pairKey = (a: number, b: number) => `${Math.min(a, b)},${Math.max(a, b)}`;
+      const matchesPerRound = n / 2;
+      for (let r = 0; r < n - 1; r++) {
+        const inRound = new Set<number>();
+        const swap = r % 2 === 1;
+        for (const [i, j] of allPairs) {
+          if (firstLegByMatchday[r].length >= matchesPerRound) break;
+          if (used.has(pairKey(i, j))) continue;
+          if (inRound.has(i) || inRound.has(j)) continue;
+          used.add(pairKey(i, j));
+          inRound.add(i);
+          inRound.add(j);
+          firstLegByMatchday[r].push({ local: swap ? j : i, away: swap ? i : j });
+        }
+      }
+    } else {
+      // n impar: ronda r (0..n-1), equipo r descansa. Partidos (r+i, r-i) mod n, i=1..(n-1)/2. Cada par aparece exactamente una vez.
+      const half = (n - 1) / 2;
+      for (let r = 0; r < n; r++) {
+        const swap = r % 2 === 1;
+        for (let i = 1; i <= half; i++) {
+          const a = (r + i) % n;
+          const b = (r - i + n) % n;
+          firstLegByMatchday[r].push({ local: swap ? b : a, away: swap ? a : b });
+        }
+      }
+    }
+
+    for (let matchday = 1; matchday <= roundsFirstLeg; matchday++) {
+      const round = matchday - 1;
+      firstLegByMatchday[round].forEach(({ local, away }) => pushFirstLeg(matchday, local, away));
+    }
+
+    // --- SEGUNDA VUELTA: mismo orden de partidos, solo intercambiar local y visitante ---
+    const startMatchday = roundsFirstLeg + 1;
+    for (let matchday = 1; matchday <= roundsFirstLeg; matchday++) {
+      const round = matchday - 1;
+      firstLegByMatchday[round].forEach(({ local, away }) => {
+        const matchdaySecond = startMatchday + round;
+        const awayAsLocal = teams.find((t: Team) => t.name === teams[away].name);
+        newMatches.push({
+          id: `${baseId}-${matchId++}`,
+          leagueId: currentId,
+          matchday: matchdaySecond,
+          localTeam: teams[away].name,
+          awayTeam: teams[local].name,
+          date: 'POR DEFINIR',
+          status: 'por_jugar',
+          stadium: awayAsLocal?.stadiumName ?? '',
+          homeScore: null,
+          awayScore: null,
+          repeticion: '',
+          historial: { local: [], away: [] }
+        });
+      });
+    }
+
+    const otherLeagueMatches = Array.isArray(newData.leagueMatches) ? newData.leagueMatches.filter((m: any) => (m.leagueId ?? 'default') !== currentId) : [];
+    newData.leagueMatches = [...otherLeagueMatches, ...newMatches];
+    setData(newData);
+    const totalMatchdays = 2 * roundsFirstLeg;
+    setMessage(`✅ Se generaron ${newMatches.length} partidos en ${totalMatchdays} jornadas. Primera vuelta: cada par se enfrenta una vez. Segunda vuelta: mismos partidos con local/visitante intercambiado. Fecha: POR DEFINIR. Estadio: del equipo local.`);
+  };
+
+  /** Parsea minuto en formato Y:XX (Y 0-5, XX 00-59). Devuelve total minutos (0-359) o null si inválido. */
+  const parseMinuteYXX = (s: string): number | null => {
+    const t = String(s).trim();
+    const parts = t.split(':');
+    if (parts.length !== 2) return null;
+    const y = parseInt(parts[0], 10);
+    const xx = parseInt(parts[1], 10);
+    if (isNaN(y) || isNaN(xx) || y < 0 || y > 5 || xx < 0 || xx > 59) return null;
+    return y * 60 + xx;
+  };
+
+  const updateLeagueMatch = (index: number, field: string, value: any) => {
+    const newData = { ...data };
+    const list = Array.isArray(newData.leagueMatches) ? [...newData.leagueMatches] : [];
+    const currentId = newData.currentLeagueId ?? 'default';
+    const currentMatches = list.filter((m: any) => (m.leagueId ?? 'default') === currentId);
+    const match = currentMatches[index];
+    if (!match) return;
+    const globalIndex = list.indexOf(match);
+    if (globalIndex < 0) return;
+
+    const wasJugado = match.status === 'jugado';
+    if (field === 'status') list[globalIndex].status = value === 'jugado' ? 'jugado' : 'por_jugar';
+    else if (field === 'date') list[globalIndex].date = String(value ?? '');
+    else if (field === 'stadium') list[globalIndex].stadium = String(value ?? '');
+    else if (field === 'matchday') list[globalIndex].matchday = value === '' || value == null ? undefined : Number(value);
+    else if (field === 'homeScore') list[globalIndex].homeScore = value === '' || value == null ? null : Number(value);
+    else if (field === 'awayScore') list[globalIndex].awayScore = value === '' || value == null ? null : Number(value);
+    else if (field === 'repeticion') list[globalIndex].repeticion = value == null ? '' : String(value);
+    else if (field === 'historial' && value && typeof value === 'object') {
+      const newHist = {
+        local: Array.isArray(value.local) ? value.local.map((x: any) => Number(x)).filter((x: number) => !isNaN(x)) : [],
+        away: Array.isArray(value.away) ? value.away.map((x: any) => Number(x)).filter((x: number) => !isNaN(x)) : []
+      };
+      const prevHome = list[globalIndex].homeScore != null ? Number(list[globalIndex].homeScore) : 0;
+      const prevAway = list[globalIndex].awayScore != null ? Number(list[globalIndex].awayScore) : 0;
+      list[globalIndex].historial = newHist;
+      list[globalIndex].homeScore = newHist.local.length;
+      list[globalIndex].awayScore = newHist.away.length;
+      const m2 = list[globalIndex];
+      const isJugado2 = m2.status === 'jugado';
+      if (isJugado2 && (prevHome !== m2.homeScore || prevAway !== m2.awayScore)) {
+        removeMatchResultFromLeagueData(newData, m2.localTeam, prevHome, m2.awayTeam, prevAway);
+        applyMatchResultToLeagueData(newData, m2.localTeam, m2.homeScore, m2.awayTeam, m2.awayScore);
+        setMessage('✅ Cronología y tabla actualizadas.');
+      }
+    }
+
+    const m = list[globalIndex];
+    const isJugado = m.status === 'jugado';
+    const homeScoreVal = (m.historial?.local?.length) ?? m.homeScore ?? 0;
+    const awayScoreVal = (m.historial?.away?.length) ?? m.awayScore ?? 0;
+    if (isJugado && !wasJugado) {
+      list[globalIndex].homeScore = homeScoreVal;
+      list[globalIndex].awayScore = awayScoreVal;
+      applyMatchResultToLeagueData(newData, m.localTeam, homeScoreVal, m.awayTeam, awayScoreVal);
+      setMessage('✅ Estadísticas actualizadas en la Tabla General');
+    }
+
+    newData.leagueMatches = list;
+    setData(newData);
+  };
+
+  const removeLeagueMatch = (index: number) => {
+    const newData = { ...data };
+    const list = Array.isArray(newData.leagueMatches) ? [...newData.leagueMatches] : [];
+    const currentId = newData.currentLeagueId ?? 'default';
+    const currentMatches = list.filter((m: any) => (m.leagueId ?? 'default') === currentId);
+    const toRemove = currentMatches[index];
+    if (!toRemove) return;
+    const removeAt = list.indexOf(toRemove);
+    if (removeAt >= 0) {
+      list.splice(removeAt, 1);
+      newData.leagueMatches = list;
+      setData(newData);
+    }
+  };
+
+  // Eliminar todos los partidos de la liga actual (sin pasar a la siguiente ni guardar en histórico)
+  const clearCurrentLeagueMatches = () => {
+    if (!confirm('¿Eliminar todos los partidos de la liga actual? No se guarda en histórico ni se pasa a la siguiente liga. Puedes volver a generar jornadas después.')) return;
+    const newData = { ...data };
+    const currentId = newData.currentLeagueId ?? 'default';
+    const list = Array.isArray(newData.leagueMatches) ? newData.leagueMatches.filter((m: any) => (m.leagueId ?? 'default') !== currentId) : [];
+    newData.leagueMatches = list;
+    setData(newData);
+    setMessage('✅ Partidos de la liga actual eliminados. Puedes generar jornadas de nuevo cuando quieras.');
   };
 
   // ========== FUNCIONES PARA TORNEO CON GRUPOS ==========
@@ -2774,35 +2982,50 @@ export default function AdminPanel() {
 
         {activeTab === 'league' && (
           <div className="admin-section">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
               <h2 style={{ margin: 0 }}>🏆 Tabla General</h2>
-              <button 
-                onClick={async () => {
-                  if (!confirm('¿Limpiar la Tabla General? Los datos actuales pasarán a la Tabla de histórico (página Histórico → Mostrar Liga) y la Tabla General quedará a cero.')) return;
-                  setLoading(true);
-                  setMessage('Guardando en Histórico y limpiando tabla...');
-                  try {
-                    const res = await fetch('/api/snapshot-and-clear-league', { method: 'POST' });
-                    const json = await res.json().catch(() => ({}));
-                    if (res.ok && json.success) {
-                      await loadData();
-                      setMessage('✅ Sí, se guardó. La Tabla General se guardó en Histórico. Puedes verla en la pestaña «Histórico» de este panel o en el menú → Histórico → Mostrar Liga.');
-                    } else {
-                      setMessage(`❌ No se guardó. ${json.error || json.message || 'Error al limpiar'}. Inténtalo de nuevo.`);
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={clearCurrentLeagueMatches}
+                  className="remove-btn"
+                  style={{ padding: '10px 16px', fontSize: '0.9rem', background: 'rgba(148, 163, 184, 0.2)', border: '1px solid #94a3b8', color: '#94a3b8' }}
+                  title="Elimina solo los partidos de la liga actual. No guarda en histórico ni pasa a la siguiente liga."
+                >
+                  🗑️ Eliminar partidos de la liga actual
+                </button>
+                <button 
+                  onClick={async () => {
+                    if (!confirm('¿Finalizar liga? La Tabla General actual se guardará en Histórico (página Histórico → Mostrar Liga) y la Tabla quedará a cero para la siguiente liga.')) return;
+                    setLoading(true);
+                    setMessage('Guardando en Histórico y finalizando liga...');
+                    try {
+                      const res = await fetch('/api/snapshot-and-clear-league', { method: 'POST' });
+                      const json = await res.json().catch(() => ({}));
+                      if (res.ok && json.success) {
+                        await loadData();
+                        setMessage('✅ Liga finalizada. La Tabla se guardó en Histórico. Puedes verla en la pestaña «Histórico» o en el menú → Histórico → Mostrar Liga.');
+                      } else {
+                        setMessage(`❌ No se guardó. ${json.error || json.message || 'Error al finalizar'}. Inténtalo de nuevo.`);
+                      }
+                    } catch (e) {
+                      setMessage(`❌ No se guardó. Error: ${e instanceof Error ? e.message : 'Error de conexión'}.`);
+                    } finally {
+                      setLoading(false);
                     }
-                  } catch (e) {
-                    setMessage(`❌ No se guardó. Error: ${e instanceof Error ? e.message : 'Error de conexión'}.`);
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                disabled={loading}
-                className="remove-btn"
-                style={{ padding: '10px 20px', fontSize: '0.9rem' }}
-                title="Los datos de la Tabla General pasan a la Tabla de histórico."
-              >
-                🗑️ Limpiar Tabla General
-              </button>
+                  }}
+                  disabled={loading || (() => {
+                    const currentId = data?.currentLeagueId ?? 'default';
+                    const currentMatches = Array.isArray(data?.leagueMatches) ? data.leagueMatches.filter((m: any) => (m.leagueId ?? 'default') === currentId) : [];
+                    if (currentMatches.length === 0) return true;
+                    return !currentMatches.every((m: any) => m.status === 'jugado');
+                  })()}
+                  className="remove-btn"
+                  style={{ padding: '10px 20px', fontSize: '0.9rem' }}
+                  title="Solo habilitado cuando todos los partidos de la liga actual están jugados. Guarda la Tabla en Histórico y prepara la siguiente liga."
+                >
+                  🏁 Finalizar liga
+                </button>
+              </div>
             </div>
             
             {/* Sección para ingresar resultados */}
@@ -2879,6 +3102,200 @@ export default function AdminPanel() {
                   ✅ Aplicar Resultado
                 </button>
               </div>
+            </div>
+
+            {/* Partidos de la liga (calendario): generar jornadas y editar */}
+            <div className="admin-subsection" style={{ background: '#1a1a2e', padding: '20px', borderRadius: '8px', marginBottom: '24px', border: '2px solid #3b82f6' }}>
+              <h3 style={{ color: '#60a5fa', marginTop: 0 }}>📅 Partidos de la liga (calendario)</h3>
+              <p style={{ color: '#b0b0b0', fontSize: '0.9rem', marginBottom: '12px' }}>
+                Liga actual: <code style={{ background: '#0a0a0a', padding: '2px 8px', borderRadius: '4px' }}>{data.currentLeagueId ?? 'default'}</code>. Al &quot;Limpiar Tabla General&quot; se crea una nueva liga y los partidos anteriores se conservan en el histórico.
+              </p>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={generateLeagueMatchdays}
+                  className="add-btn"
+                  style={{ background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6', color: '#60a5fa' }}
+                  title="Genera todos los partidos de la liga actual: ida y vuelta. Fecha: POR DEFINIR, estadio: del equipo local."
+                >
+                  🏟️ Generar jornadas (ida y vuelta)
+                </button>
+              </div>
+              <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '16px' }}>
+                Cada equipo se enfrenta a todos los demás dos veces (local y visitante). Edita fecha y estadio. Añade goles con la cronología y pulsa &quot;Finalizar partido&quot; para guardar el resultado y actualizar la Tabla General. Los partidos jugados aparecen al final por si necesitas modificar algo.
+              </p>
+              {(() => {
+                const list = Array.isArray(data.leagueMatches) ? data.leagueMatches : [];
+                const currentId = data.currentLeagueId ?? 'default';
+                const currentMatches = list.filter((m: any) => (m.leagueId ?? 'default') === currentId);
+                const sortMatches = (arr: any[]) => [...arr].sort((a: any, b: any) => {
+                  const ja = a.matchday ?? 0;
+                  const jb = b.matchday ?? 0;
+                  if (ja !== jb) return ja - jb;
+                  const da = (a.date || '').toString();
+                  const db = (b.date || '').toString();
+                  if (da === 'POR DEFINIR' && db !== 'POR DEFINIR') return 1;
+                  if (da !== 'POR DEFINIR' && db === 'POR DEFINIR') return -1;
+                  return da.localeCompare(db);
+                });
+                const porJugar = sortMatches(currentMatches.filter((m: any) => m.status !== 'jugado'));
+                const jugados = sortMatches(currentMatches.filter((m: any) => m.status === 'jugado'));
+                const renderMatch = (match: any, origIndex: number) => {
+                  const isJugado = match.status === 'jugado';
+                  const hist = match.historial && typeof match.historial === 'object' ? match.historial : { local: [], away: [] };
+                  const homeScore = hist.local?.length ?? 0;
+                  const awayScore = hist.away?.length ?? 0;
+                  const addGoal = addGoalInput[match.id] ?? { author: 'local' as const, minute: '' };
+                  const setAddGoal = (next: { author: 'local' | 'away'; minute: string }) => setAddGoalInput(prev => ({ ...prev, [match.id]: next }));
+                  const onAddGoal = () => {
+                    const totalMin = parseMinuteYXX(addGoal.minute);
+                    if (totalMin == null) {
+                      setMessage('❌ Minuto inválido. Usa formato Y:XX (Y 0-5, XX 00-59).');
+                      return;
+                    }
+                    const newLocal = [...(hist.local || [])];
+                    const newAway = [...(hist.away || [])];
+                    if (addGoal.author === 'local') newLocal.push(totalMin);
+                    else newAway.push(totalMin);
+                    updateLeagueMatch(origIndex, 'historial', { local: newLocal, away: newAway });
+                    setAddGoal({ ...addGoal, minute: '' });
+                  };
+                  const onFinalizar = () => {
+                    updateLeagueMatch(origIndex, 'status', 'jugado');
+                    setMessage('✅ Partido finalizado. Resultado y tabla actualizados.');
+                  };
+                  return (
+                    <div key={match.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid #333' }}>
+                      <div className="admin-match" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ minWidth: '50px', color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600 }} title="Jornada">{match.matchday ?? '—'}</span>
+                        <span style={{ minWidth: '100px', color: '#fff', fontWeight: 600 }}>{match.localTeam}</span>
+                        {isJugado ? (
+                          <>
+                            <span style={{ width: '50px', textAlign: 'center', padding: '8px', color: '#ffd23f', fontWeight: 700 }} title="Marcador desde cronología">{homeScore}</span>
+                            <span style={{ color: '#ff6b35' }}>–</span>
+                            <span style={{ width: '50px', textAlign: 'center', padding: '8px', color: '#ffd23f', fontWeight: 700 }}>{awayScore}</span>
+                          </>
+                        ) : (
+                          <span style={{ width: '120px', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>— Por jugar —</span>
+                        )}
+                        <span style={{ minWidth: '100px', color: '#fff', fontWeight: 600 }}>{match.awayTeam}</span>
+                        <input
+                          type="text"
+                          value={match.date}
+                          onChange={(e) => updateLeagueMatch(origIndex, 'date', e.target.value)}
+                          placeholder="Fecha"
+                          style={{ minWidth: '100px', padding: '8px' }}
+                        />
+                        <input
+                          type="text"
+                          value={match.stadium}
+                          onChange={(e) => updateLeagueMatch(origIndex, 'stadium', e.target.value)}
+                          placeholder="Estadio"
+                          style={{ minWidth: '100px', padding: '8px' }}
+                        />
+                        {!isJugado && (
+                          <button type="button" onClick={onFinalizar} style={{ padding: '8px 14px', background: '#22c55e', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 600, cursor: 'pointer' }} title="Guarda el resultado (cronología) y actualiza la tabla">
+                            Finalizar partido
+                          </button>
+                        )}
+                        <button type="button" onClick={() => removeLeagueMatch(origIndex)} className="remove-btn" title="Eliminar partido">🗑️</button>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', fontSize: '0.85rem' }}>
+                        <span style={{ color: '#94a3b8', minWidth: '80px' }}>Repetición:</span>
+                        <input
+                          type="url"
+                          value={match.repeticion ?? ''}
+                          onChange={(e) => updateLeagueMatch(origIndex, 'repeticion', e.target.value)}
+                          placeholder="URL repetición"
+                          style={{ flex: 1, minWidth: '180px', padding: '6px 10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}
+                        />
+                      </div>
+                      {!isJugado && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginTop: '4px', fontSize: '0.85rem' }}>
+                          <span style={{ color: '#94a3b8', fontWeight: 600 }}>Cronología — Añadir gol (antes de finalizar):</span>
+                          <select
+                            value={addGoal.author}
+                            onChange={(e) => setAddGoal({ ...addGoal, author: e.target.value as 'local' | 'away' })}
+                            style={{ padding: '6px 10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}
+                            title="Autor del gol"
+                          >
+                            <option value="local">{match.localTeam} (local)</option>
+                            <option value="away">{match.awayTeam} (visitante)</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={addGoal.minute}
+                            onChange={(e) => setAddGoal({ ...addGoal, minute: e.target.value })}
+                            placeholder="Y:XX (ej. 0:23, 1:15)"
+                            style={{ width: '120px', padding: '6px 10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}
+                            title="Y 0-5, XX 00-59"
+                          />
+                          <button type="button" onClick={onAddGoal} style={{ padding: '6px 12px', background: '#ff6b35', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+                            Añadir gol
+                          </button>
+                        </div>
+                      )}
+                      {isJugado && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginTop: '4px', fontSize: '0.85rem' }}>
+                          <span style={{ color: '#94a3b8', fontWeight: 600 }}>Cronología — Añadir gol (revisión):</span>
+                          <select
+                            value={addGoal.author}
+                            onChange={(e) => setAddGoal({ ...addGoal, author: e.target.value as 'local' | 'away' })}
+                            style={{ padding: '6px 10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}
+                            title="Autor del gol"
+                          >
+                            <option value="local">{match.localTeam} (local)</option>
+                            <option value="away">{match.awayTeam} (visitante)</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={addGoal.minute}
+                            onChange={(e) => setAddGoal({ ...addGoal, minute: e.target.value })}
+                            placeholder="Y:XX (ej. 0:23, 1:15)"
+                            style={{ width: '120px', padding: '6px 10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}
+                            title="Y 0-5, XX 00-59"
+                          />
+                          <button type="button" onClick={onAddGoal} style={{ padding: '6px 12px', background: '#ff6b35', border: 'none', borderRadius: '6px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+                            Añadir gol
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                };
+                return currentMatches.length === 0 ? (
+                  <p style={{ color: '#888' }}>No hay partidos de esta liga. Pulsa &quot;Generar jornadas (ida y vuelta)&quot; después de tener equipos inscritos.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '600px', overflowY: 'auto' }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 12px 0', color: '#ff6b35', fontSize: '1rem', fontWeight: 700, borderBottom: '2px solid rgba(255,107,53,0.4)', paddingBottom: '6px' }}>Partidos por jugar</h4>
+                      {porJugar.length === 0 ? (
+                        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No hay partidos pendientes.</p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {porJugar.map((match: any) => {
+                            const origIndex = currentMatches.indexOf(match);
+                            return renderMatch(match, origIndex);
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h4 style={{ margin: '0 0 12px 0', color: '#94a3b8', fontSize: '1rem', fontWeight: 700, borderBottom: '2px solid rgba(148,163,184,0.4)', paddingBottom: '6px' }}>Partidos jugados</h4>
+                      <p style={{ color: '#64748b', fontSize: '0.8rem', margin: '0 0 8px 0' }}>Solo para revisión o modificar algo si hace falta.</p>
+                      {jugados.length === 0 ? (
+                        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Aún no hay partidos finalizados.</p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {jugados.map((match: any) => {
+                            const origIndex = currentMatches.indexOf(match);
+                            return renderMatch(match, origIndex);
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             
             <div className="admin-note" style={{ background: '#1e3a5f', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>

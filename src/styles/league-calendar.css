@@ -1,0 +1,379 @@
+/* Vista Calendario en Liga - partidos con colores de equipo */
+.league-calendar-section {
+  padding: clamp(70px, 12vw, 100px) 0 clamp(40px, 8vw, 60px);
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+  min-height: calc(100vh - 80px);
+}
+
+.league-calendar-section .section-title {
+  margin-bottom: 30px;
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  color: #ffffff;
+}
+
+.league-calendar-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.league-match-card {
+  background: rgba(26, 26, 46, 0.8);
+  border: 1px solid rgba(255, 107, 53, 0.25);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-width: 0;
+}
+
+.league-match-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
+}
+
+/* Tarjeta principal (la que se ve siempre): dos filas de equipos con colores */
+.league-match-card-main {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  position: relative;
+  outline: none;
+}
+
+.league-match-card-teams {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.league-match-card-team {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  min-height: 44px;
+  border-left: 4px solid transparent;
+}
+
+.league-match-card-team:first-child {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.league-match-card-team-name {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.league-match-card-score {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffd23f;
+  min-width: 2.5rem;
+  text-align: center;
+}
+
+.league-match-card-por-jugar {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+}
+
+/* Modal flotante: ventana grande en el centro */
+.league-match-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: league-match-modal-fade 0.2s ease;
+}
+
+@keyframes league-match-modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.league-match-modal {
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid rgba(255, 107, 53, 0.4);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: league-match-modal-scale 0.25s ease;
+}
+
+@keyframes league-match-modal-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.league-match-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 107, 53, 0.3);
+  flex-shrink: 0;
+}
+
+.league-match-modal-title {
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.league-match-modal-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.league-match-modal-close:hover {
+  background: rgba(255, 107, 53, 0.3);
+  color: #fff;
+}
+
+.league-match-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.league-match-modal-row {
+  display: flex;
+  align-items: stretch;
+  min-height: 56px;
+}
+
+.league-match-modal-team-block {
+  flex: 1;
+  min-width: 0;
+  border-left: 4px solid transparent;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+/* Equipo local: curva en la línea vertical (esquina superior izquierda), barra horizontal recta */
+.league-match-modal-team-block:first-child {
+  border-radius: 8px 0 4px 8px;
+}
+
+/* Equipo visitante: borde y color principal en el lado exterior (derecha) */
+.league-match-modal-team-block--away {
+  border-left: none;
+  border-right: 4px solid transparent;
+}
+
+/* Equipo visitante: curva en la línea vertical (esquina superior derecha), barra horizontal recta */
+.league-match-modal-team-block:last-child {
+  border-radius: 0 8px 8px 4px;
+}
+
+/* Barra visitante: principal a la derecha (exterior), secundario hacia el centro */
+.league-match-modal-team-bar--away {
+  flex-direction: row-reverse;
+}
+
+/* Barra horizontal siempre recta hasta la línea vertical (la curva la hace el bloque) */
+.league-match-modal-team-bar {
+  height: 8px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0;
+}
+
+.league-match-modal-team-block .league-match-modal-team-name {
+  padding: 12px 14px 4px;
+  font-size: 1rem;
+}
+
+.league-match-modal-cronologia-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 14px 12px;
+}
+
+.league-match-modal-gol-minuto {
+  font-size: 0.9rem;
+  color: #e2e8f0;
+}
+
+.league-match-modal-score-block {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  min-width: 88px;
+  background: rgba(0, 0, 0, 0.3);
+  border-left: 1px solid rgba(255, 107, 53, 0.25);
+  border-right: 1px solid rgba(255, 107, 53, 0.25);
+}
+
+.league-match-modal-score-display {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #ffd23f;
+}
+
+.league-match-modal-meta {
+  padding: 12px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  font-size: 0.95rem;
+  color: #b0b0b0;
+}
+
+.league-match-modal-meta span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.league-match-modal-box {
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.9rem;
+  color: #b0b0b0;
+}
+
+.league-match-modal-box-label {
+  font-weight: 600;
+  color: #94a3b8;
+  margin-right: 8px;
+}
+
+.league-match-modal-replay-link {
+  color: #60a5fa;
+  text-decoration: none;
+}
+
+.league-match-modal-replay-link:hover {
+  text-decoration: underline;
+}
+
+.league-match-modal-no-replay {
+  color: #64748b;
+  font-style: italic;
+}
+
+.league-match-modal-goles .league-match-modal-historial {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto;
+  gap: 10px 16px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.league-match-modal-team-name {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 600;
+  color: #fff;
+}
+
+.league-match-modal-minutes {
+  color: #e2e8f0;
+  font-size: 0.95rem;
+}
+
+.league-match-card-meta {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 0.8rem;
+  color: #b0b0b0;
+}
+
+.league-match-card-meta span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+
+.league-match-empty {
+  text-align: center;
+  color: #b0b0b0;
+  padding: 40px 20px;
+  font-size: 1rem;
+}
+
+/* Agrupación por jornada */
+.league-calendar-matchday {
+  margin-bottom: 32px;
+}
+
+.league-calendar-matchday-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ff6b35;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid rgba(255, 107, 53, 0.4);
+}
+
+.league-calendar-matchday-matches {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .league-calendar-matchday-matches {
+    grid-template-columns: 1fr;
+  }
+
+  .league-calendar-grid {
+    max-width: 100%;
+  }
+}
