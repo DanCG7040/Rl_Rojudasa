@@ -91,6 +91,17 @@ interface Group {
   qualified?: string[]; // Equipos que pasan a la siguiente fase
 }
 
+/** Liga como entidad persistida: equipos (tabla), partidos, estado y ganador */
+export interface LeagueEntity {
+  id: string;
+  name: string;
+  standings: Team[];           // tabla general (equipos que participan + estadísticas)
+  matches: any[];              // partidos de la liga (mismo formato que leagueMatches)
+  status: 'Activa' | 'Finalizada';
+  winner: string | null;       // nombre del equipo ganador cuando status === 'Finalizada'
+  createdAt?: string;         // ISO date opcional
+}
+
 export default function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
@@ -104,12 +115,14 @@ export default function AdminPanel() {
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [editingTeamIndex, setEditingTeamIndex] = useState<number | null>(null);
-  const [newResult, setNewResult] = useState({ team1: '', team2: '', goals1: '', goals2: '' });
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [tournamentType, setTournamentType] = useState<'groups' | 'direct'>('groups');
   const [knockoutRoundTab, setKnockoutRoundTab] = useState<'roundOf16' | 'quarterFinals' | 'semiFinals' | 'final'>('roundOf16');
   const [addGoalInput, setAddGoalInput] = useState<Record<string, { author: 'local' | 'away'; minute: string }>>({});
+  const [newLeagueName, setNewLeagueName] = useState('');
+  const [newLeagueTeamNames, setNewLeagueTeamNames] = useState<string[]>([]);
+  const [newLeagueSelectedTeam, setNewLeagueSelectedTeam] = useState('');
 
   // Permite 0 como marcador (parseInt(x)||null convierte 0 en null)
   const parseScoreInput = (value: string): number | null => {
@@ -174,8 +187,39 @@ export default function AdminPanel() {
       if (!json.leagueMatches) {
         json.leagueMatches = [];
       }
-      if (json.currentLeagueId == null) {
+      // currentLeagueId null = no liga activa (mostrar "Crear nueva liga"); solo default para compatibilidad con datos antiguos
+      if (json.currentLeagueId == null && json.league?.teams?.length > 0) {
         json.currentLeagueId = 'default';
+      }
+      // Catálogo de equipos (master): migrar desde league.teams si no existe
+      if (!Array.isArray(json.allTeams)) {
+        json.allTeams = Array.isArray(json.league?.teams) ? json.league.teams.map((t: any) => ({ ...t })) : [];
+      }
+      // Ligas como entidades: equipos, tabla, partidos, estado, ganador
+      if (!Array.isArray(json.leagues)) {
+        json.leagues = [];
+      }
+      // Migración: si hay league/leagueMatches pero no hay liga en leagues, crear una entidad
+      const currentId = json.currentLeagueId ?? 'default';
+      if (json.leagues.length === 0 && Array.isArray(json.league?.teams) && json.league.teams.length > 0) {
+        const allMatches = Array.isArray(json.leagueMatches) ? json.leagueMatches.filter((m: any) => (m.leagueId ?? 'default') === currentId) : [];
+        json.leagues.push({
+          id: currentId,
+          name: 'Liga actual',
+          standings: json.league.teams.map((t: any) => ({ ...t })),
+          matches: allMatches.map((m: any) => ({ ...m, leagueId: currentId })),
+          status: 'Activa',
+          winner: null,
+          createdAt: new Date().toISOString()
+        });
+      }
+      // Sincronizar vista actual desde data.leagues si hay currentLeagueId
+      if (currentId && json.leagues.length > 0) {
+        const currentLeague = json.leagues.find((l: LeagueEntity) => l.id === currentId);
+        if (currentLeague && currentLeague.status === 'Activa') {
+          json.league = { teams: (currentLeague.standings || []).map((t: any) => ({ ...t })) };
+          json.leagueMatches = (currentLeague.matches || []).map((m: any) => ({ ...m, leagueId: currentId }));
+        }
       }
       if (!json.tournament) {
         json.tournament = {
@@ -225,8 +269,8 @@ export default function AdminPanel() {
 
   const handleResetTournament = async () => {
     if (!confirm('¿Eliminar datos de la copa/torneo? Los datos actuales de la copa se guardarán en Histórico. Se vacían bracket y próximos partidos; se mantienen equipos.')) return;
-    if (!data?.league || !Array.isArray(data.league.teams)) {
-      setMessage('⚠️ No hay equipos cargados. Carga la página e inténtalo de nuevo.');
+    if (!data?.league) {
+      setMessage('⚠️ No hay datos de liga. Carga la página e inténtalo de nuevo.');
       return;
     }
     setLoading(true);
@@ -307,6 +351,26 @@ export default function AdminPanel() {
     setData(null);
   };
 
+  const handleFinalizeLeague = async () => {
+    if (!confirm('¿Finalizar liga? La Tabla General actual se guardará en Histórico (página Histórico → Mostrar Liga) y la Tabla quedará a cero para la siguiente liga.')) return;
+    setLoading(true);
+    setMessage('Guardando en Histórico y finalizando liga...');
+    try {
+      const res = await fetch('/api/snapshot-and-clear-league', { method: 'POST' });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) {
+        await loadData();
+        setMessage('✅ Liga finalizada. La Tabla se guardó en Histórico. Puedes verla en la pestaña «Histórico» o en el menú → Histórico → Mostrar Liga.');
+      } else {
+        setMessage(`❌ No se guardó. ${json.error || json.message || 'Error al finalizar'}. Inténtalo de nuevo.`);
+      }
+    } catch (e) {
+      setMessage(`❌ No se guardó. Error: ${e instanceof Error ? e.message : 'Error de conexión'}.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSave = async () => {
     setLoading(true);
     setMessage('Guardando...');
@@ -334,6 +398,7 @@ export default function AdminPanel() {
         console.error('📋 Campos faltantes:', {
           bracket: !data.bracket,
           league: !data.league,
+        allTeams: (data.allTeams?.length ?? 0),
           upcomingMatches: !data.upcomingMatches
         });
         setMessage('⚠️ Error: Estructura de datos inválida. Por favor, recarga la página.');
@@ -342,6 +407,8 @@ export default function AdminPanel() {
       }
 
       console.log('🔧 Limpiando y preparando datos para enviar...');
+      const dataSynced = { ...data };
+      syncCurrentLeagueIntoLeagues(dataSynced);
       
       // Limpiar y preparar los datos para enviar (eliminar referencias circulares y valores no serializables)
       const dataToSend: any = {
@@ -353,7 +420,7 @@ export default function AdminPanel() {
           final: data.bracket.final || { id: 'final', team1: { name: '', score: null }, team2: { name: '', score: null }, completed: false, date: '' }
         },
         league: {
-          teams: Array.isArray(data.league.teams) ? data.league.teams.map((team: Team) => ({
+          teams: Array.isArray(dataSynced.league.teams) ? dataSynced.league.teams.map((team: Team) => ({
             position: Number(team.position) || 0,
             name: String(team.name || ''),
             color: String(team.color || TEAM_COLORS[0]),
@@ -372,7 +439,7 @@ export default function AdminPanel() {
             points: Number(team.points) || 0
           })) : []
         },
-        upcomingMatches: Array.isArray(data.upcomingMatches) ? data.upcomingMatches.map((match: any) => ({
+        upcomingMatches: Array.isArray(dataSynced.upcomingMatches) ? dataSynced.upcomingMatches.map((match: any) => ({
           id: String(match.id || `up${Date.now()}`),
           team1: String(match.team1 || ''),
           team2: String(match.team2 || ''),
@@ -380,9 +447,9 @@ export default function AdminPanel() {
           time: String(match.time || ''),
           type: String(match.type || 'Liga')
         })) : [],
-        leagueMatches: Array.isArray(data.leagueMatches) ? data.leagueMatches.map((m: any) => ({
+        leagueMatches: Array.isArray(dataSynced.leagueMatches) ? dataSynced.leagueMatches.map((m: any) => ({
           id: String(m.id || `lm${Date.now()}`),
-          leagueId: String(m.leagueId ?? data.currentLeagueId ?? 'default'),
+          leagueId: String(m.leagueId ?? dataSynced.currentLeagueId ?? 'default'),
           matchday: m.matchday != null ? Number(m.matchday) : undefined,
           localTeam: String(m.localTeam ?? ''),
           awayTeam: String(m.awayTeam ?? ''),
@@ -397,7 +464,64 @@ export default function AdminPanel() {
             away: Array.isArray(m.historial.away) ? m.historial.away.map((x: any) => Number(x)).filter((x: number) => !isNaN(x)) : []
           } : undefined
         })) : [],
-        currentLeagueId: String(data.currentLeagueId ?? 'default')
+        currentLeagueId: String(dataSynced.currentLeagueId ?? 'default'),
+        leagues: Array.isArray(dataSynced.leagues) ? dataSynced.leagues.map((L: LeagueEntity) => ({
+          id: String(L.id),
+          name: String(L.name ?? ''),
+          standings: Array.isArray(L.standings) ? L.standings.map((team: Team) => ({
+            position: Number(team.position) || 0,
+            name: String(team.name || ''),
+            color: team.color,
+            colorSecondary: team.colorSecondary,
+            stadiumName: team.stadiumName,
+            stadiumImage: team.stadiumImage,
+            leaguesWon: team.leaguesWon,
+            cupsWon: team.cupsWon,
+            played: Number(team.played) || 0,
+            wins: Number(team.wins) || 0,
+            draws: Number(team.draws) || 0,
+            losses: Number(team.losses) || 0,
+            goalsFor: Number(team.goalsFor) || 0,
+            goalsAgainst: Number(team.goalsAgainst) || 0,
+            goalDifference: Number(team.goalDifference) || 0,
+            points: Number(team.points) || 0
+          })) : [],
+          matches: Array.isArray(L.matches) ? L.matches.map((m: any) => ({
+            id: String(m.id),
+            leagueId: String(m.leagueId ?? L.id),
+            matchday: m.matchday != null ? Number(m.matchday) : undefined,
+            localTeam: String(m.localTeam ?? ''),
+            awayTeam: String(m.awayTeam ?? ''),
+            date: String(m.date ?? ''),
+            status: m.status === 'jugado' ? 'jugado' : 'por_jugar',
+            stadium: String(m.stadium ?? ''),
+            homeScore: m.homeScore != null ? Number(m.homeScore) : null,
+            awayScore: m.awayScore != null ? Number(m.awayScore) : null,
+            repeticion: m.repeticion != null ? String(m.repeticion) : '',
+            historial: m.historial && typeof m.historial === 'object' ? { local: m.historial.local || [], away: m.historial.away || [] } : undefined
+          })) : [],
+          status: L.status === 'Finalizada' ? 'Finalizada' : 'Activa',
+          winner: L.winner != null ? String(L.winner) : null,
+          createdAt: L.createdAt != null ? String(L.createdAt) : undefined
+        })) : [],
+        allTeams: Array.isArray(dataSynced.allTeams) ? dataSynced.allTeams.map((team: Team) => ({
+          position: Number(team.position) || 0,
+          name: String(team.name || ''),
+          color: String(team.color || TEAM_COLORS[0]),
+          colorSecondary: team.colorSecondary != null ? String(team.colorSecondary) : undefined,
+          stadiumName: team.stadiumName != null ? String(team.stadiumName) : undefined,
+          stadiumImage: team.stadiumImage != null ? String(team.stadiumImage) : undefined,
+          leaguesWon: team.leaguesWon != null ? Number(team.leaguesWon) : undefined,
+          cupsWon: team.cupsWon != null ? Number(team.cupsWon) : undefined,
+          played: Number(team.played) || 0,
+          wins: Number(team.wins) || 0,
+          draws: Number(team.draws) || 0,
+          losses: Number(team.losses) || 0,
+          goalsFor: Number(team.goalsFor) || 0,
+          goalsAgainst: Number(team.goalsAgainst) || 0,
+          goalDifference: Number(team.goalDifference) || 0,
+          points: Number(team.points) || 0
+        })) : []
       };
       
       // Incluir tournament si existe
@@ -591,6 +715,20 @@ export default function AdminPanel() {
     setLoading(false);
   };
 
+  /** Sincroniza la liga actual (league.teams + leagueMatches) en data.leagues para persistir como entidad. */
+  const syncCurrentLeagueIntoLeagues = (dataObj: any) => {
+    if (!dataObj || !dataObj.currentLeagueId) return;
+    if (!Array.isArray(dataObj.leagues)) dataObj.leagues = [];
+    const idx = dataObj.leagues.findIndex((l: LeagueEntity) => l.id === dataObj.currentLeagueId);
+    const standings = Array.isArray(dataObj.league?.teams) ? dataObj.league.teams.map((t: any) => ({ ...t })) : [];
+    const currentMatches = Array.isArray(dataObj.leagueMatches) ? dataObj.leagueMatches.filter((m: any) => (m.leagueId ?? 'default') === dataObj.currentLeagueId) : [];
+    const matches = currentMatches.map((m: any) => ({ ...m, leagueId: dataObj.currentLeagueId }));
+    if (idx >= 0) {
+      dataObj.leagues[idx].standings = standings;
+      dataObj.leagues[idx].matches = matches;
+    }
+  };
+
   // Aplica el resultado de un partido a la tabla de liga sobre el objeto data (mutación). Usar para no perder otros cambios al actualizar.
   const applyMatchResultToLeagueData = (dataObj: any, team1Name: string, team1Score: number, team2Name: string, team2Score: number) => {
     if (!dataObj?.league?.teams || !team1Name || !team2Name || team1Score == null || team2Score == null) return;
@@ -655,6 +793,7 @@ export default function AdminPanel() {
     const newData = { ...data };
     if (!newData.league?.teams) return;
     applyMatchResultToLeagueData(newData, team1Name, team1Score, team2Name, team2Score);
+    syncCurrentLeagueIntoLeagues(newData);
     setData(newData);
     setMessage('✅ Estadísticas actualizadas automáticamente desde el resultado del partido');
     return;
@@ -723,10 +862,12 @@ export default function AdminPanel() {
     setData(newData);
   };
 
+  const allTeams = Array.isArray(data?.allTeams) ? data.allTeams : [];
+
   const addTeam = () => {
     setEditingTeamIndex(null);
-    const usedColors = new Set(data.league.teams.map((t: Team) => t.color).filter(Boolean));
-    const defaultColor = TEAM_COLORS.find(c => !usedColors.has(c)) || TEAM_COLORS[data.league.teams.length % TEAM_COLORS.length];
+    const usedColors = new Set(allTeams.map((t: Team) => t.color).filter(Boolean));
+    const defaultColor = TEAM_COLORS.find(c => !usedColors.has(c)) || TEAM_COLORS[allTeams.length % TEAM_COLORS.length];
     setEditingTeam({
       position: 0,
       name: '',
@@ -755,24 +896,14 @@ export default function AdminPanel() {
     }
 
     const newData = { ...data };
-    const isEditing = editingTeamIndex !== null && editingTeamIndex >= 0 && editingTeamIndex < newData.league.teams.length;
+    if (!Array.isArray(newData.allTeams)) newData.allTeams = [];
+    const isEditing = editingTeamIndex !== null && editingTeamIndex >= 0 && editingTeamIndex < newData.allTeams.length;
 
     if (isEditing) {
-      // Actualizar equipo existente por índice (aunque se haya cambiado el nombre)
-      newData.league.teams[editingTeamIndex!] = { ...editingTeam };
+      newData.allTeams[editingTeamIndex!] = { ...editingTeam };
     } else {
-      // Añadir nuevo equipo
-      newData.league.teams.push({ ...editingTeam });
+      newData.allTeams.push({ ...editingTeam });
     }
-
-    // Recalcular posiciones
-    newData.league.teams.sort((a: Team, b: Team) => {
-      if (b.points !== a.points) return b.points - a.points;
-      return b.goalDifference - a.goalDifference;
-    });
-    newData.league.teams.forEach((team: Team, i: number) => {
-      team.position = i + 1;
-    });
 
     setData(newData);
     setShowTeamModal(false);
@@ -790,13 +921,8 @@ export default function AdminPanel() {
   const deleteTeam = (index: number) => {
     if (confirm('¿Estás seguro de eliminar este equipo?')) {
       const newData = { ...data };
-      newData.league.teams.splice(index, 1);
-      
-      // Recalcular posiciones
-      newData.league.teams.forEach((team: Team, i: number) => {
-        team.position = i + 1;
-      });
-      
+      if (!Array.isArray(newData.allTeams)) newData.allTeams = [];
+      newData.allTeams.splice(index, 1);
       setData(newData);
       setMessage('✅ Equipo eliminado');
     }
@@ -810,8 +936,8 @@ export default function AdminPanel() {
 
   const addUpcomingMatch = () => {
     const newData = { ...data };
-    const firstTeam = data.league.teams.length > 0 ? data.league.teams[0].name : '';
-    const secondTeam = data.league.teams.length > 1 ? data.league.teams[1].name : '';
+    const firstTeam = allTeams.length > 0 ? allTeams[0].name : '';
+    const secondTeam = allTeams.length > 1 ? allTeams[1].name : '';
     const newMatch = {
       id: `up${Date.now()}`,
       team1: firstTeam,
@@ -844,9 +970,9 @@ export default function AdminPanel() {
   );
 
   const generateLeagueMatches = () => {
-    const teams = data.league.teams;
-    if (!teams || teams.length < 2) {
-      setMessage('⚠️ Necesitas al menos 2 equipos en la pestaña Equipos para generar partidos de liga.');
+    const teams = data.league?.teams ?? [];
+    if (teams.length < 2) {
+      setMessage('⚠️ Necesitas una liga con al menos 2 equipos (o crea una nueva liga en la pestaña Liga) para generar partidos de liga.');
       return;
     }
     const newData = { ...data };
@@ -974,9 +1100,145 @@ export default function AdminPanel() {
 
     const otherLeagueMatches = Array.isArray(newData.leagueMatches) ? newData.leagueMatches.filter((m: any) => (m.leagueId ?? 'default') !== currentId) : [];
     newData.leagueMatches = [...otherLeagueMatches, ...newMatches];
+    syncCurrentLeagueIntoLeagues(newData);
     setData(newData);
     const totalMatchdays = 2 * roundsFirstLeg;
     setMessage(`✅ Se generaron ${newMatches.length} partidos en ${totalMatchdays} jornadas. Primera vuelta: cada par se enfrenta una vez. Segunda vuelta: mismos partidos con local/visitante intercambiado. Fecha: POR DEFINIR. Estadio: del equipo local.`);
+  };
+
+  // Crear nueva liga: tabla general (solo datos de partidos) + calendario automático
+  const createNewLeague = () => {
+    const name = (newLeagueName || '').trim();
+    if (!name) {
+      setMessage('⚠️ Escribe el nombre de la liga.');
+      return;
+    }
+    if (newLeagueTeamNames.length < 2) {
+      setMessage('⚠️ Añade al menos 2 equipos a la liga.');
+      return;
+    }
+    const initialTeams: Team[] = newLeagueTeamNames.map((teamName, idx) => {
+      const t = allTeams.find((x: Team) => x.name === teamName);
+      return {
+        position: idx + 1,
+        name: teamName,
+        color: t?.color,
+        colorSecondary: t?.colorSecondary,
+        stadiumName: t?.stadiumName,
+        stadiumImage: t?.stadiumImage,
+        leaguesWon: t?.leaguesWon,
+        cupsWon: t?.cupsWon,
+        played: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        goalDifference: 0,
+        points: 0
+      };
+    });
+    const newData = { ...data };
+    newData.league = { teams: initialTeams };
+    const currentId = `liga-${Date.now()}`;
+    newData.currentLeagueId = currentId;
+    const teams = initialTeams;
+    const n = teams.length;
+    const isEven = n % 2 === 0;
+    const baseId = `lm${Date.now()}`;
+    const newMatches: any[] = [];
+    let matchId = 0;
+    const pushFirstLeg = (matchday: number, localIdx: number, awayIdx: number) => {
+      newMatches.push({
+        id: `${baseId}-${matchId++}`,
+        leagueId: currentId,
+        matchday,
+        localTeam: teams[localIdx].name,
+        awayTeam: teams[awayIdx].name,
+        date: 'POR DEFINIR',
+        status: 'por_jugar',
+        stadium: teams[localIdx].stadiumName ?? '',
+        homeScore: null,
+        awayScore: null,
+        repeticion: '',
+        historial: { local: [], away: [] }
+      });
+    };
+    const roundsFirstLeg = isEven ? n - 1 : n;
+    const firstLegByMatchday: { local: number; away: number }[][] = Array.from({ length: roundsFirstLeg }, () => []);
+    if (isEven) {
+      type Pair = [number, number];
+      const allPairs: Pair[] = [];
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) allPairs.push([i, j]);
+      const used = new Set<string>();
+      const pairKey = (a: number, b: number) => `${Math.min(a, b)},${Math.max(a, b)}`;
+      const matchesPerRound = n / 2;
+      for (let r = 0; r < n - 1; r++) {
+        const inRound = new Set<number>();
+        const swap = r % 2 === 1;
+        for (const [i, j] of allPairs) {
+          if (firstLegByMatchday[r].length >= matchesPerRound) break;
+          if (used.has(pairKey(i, j))) continue;
+          if (inRound.has(i) || inRound.has(j)) continue;
+          used.add(pairKey(i, j));
+          inRound.add(i);
+          inRound.add(j);
+          firstLegByMatchday[r].push({ local: swap ? j : i, away: swap ? i : j });
+        }
+      }
+    } else {
+      const half = (n - 1) / 2;
+      for (let r = 0; r < n; r++) {
+        const swap = r % 2 === 1;
+        for (let i = 1; i <= half; i++) {
+          const a = (r + i) % n;
+          const b = (r - i + n) % n;
+          firstLegByMatchday[r].push({ local: swap ? b : a, away: swap ? a : b });
+        }
+      }
+    }
+    for (let matchday = 1; matchday <= roundsFirstLeg; matchday++) {
+      const round = matchday - 1;
+      firstLegByMatchday[round].forEach(({ local, away }) => pushFirstLeg(matchday, local, away));
+    }
+    const startMatchday = roundsFirstLeg + 1;
+    for (let matchday = 1; matchday <= roundsFirstLeg; matchday++) {
+      const round = matchday - 1;
+      firstLegByMatchday[round].forEach(({ local, away }) => {
+        const awayAsLocal = teams.find((t: Team) => t.name === teams[away].name);
+        newMatches.push({
+          id: `${baseId}-${matchId++}`,
+          leagueId: currentId,
+          matchday: startMatchday + round,
+          localTeam: teams[away].name,
+          awayTeam: teams[local].name,
+          date: 'POR DEFINIR',
+          status: 'por_jugar',
+          stadium: awayAsLocal?.stadiumName ?? '',
+          homeScore: null,
+          awayScore: null,
+          repeticion: '',
+          historial: { local: [], away: [] }
+        });
+      });
+    }
+    const otherLeagueMatches = Array.isArray(newData.leagueMatches) ? newData.leagueMatches.filter((m: any) => (m.leagueId ?? 'default') !== currentId) : [];
+    newData.leagueMatches = [...otherLeagueMatches, ...newMatches];
+    if (!Array.isArray(newData.leagues)) newData.leagues = [];
+    newData.leagues.push({
+      id: currentId,
+      name,
+      standings: initialTeams.map((t: Team) => ({ ...t })),
+      matches: newMatches.map((m: any) => ({ ...m, leagueId: currentId })),
+      status: 'Activa',
+      winner: null,
+      createdAt: new Date().toISOString()
+    });
+    setData(newData);
+    setNewLeagueName('');
+    setNewLeagueTeamNames([]);
+    setNewLeagueSelectedTeam('');
+    setMessage(`✅ Liga «${name}» creada. Tabla general y calendario (${newMatches.length} partidos) generados. La tabla se actualizará solo con los resultados de los partidos.`);
   };
 
   /** Parsea minuto en formato Y:XX (Y 0-5, XX 00-59). Devuelve total minutos (0-359) o null si inválido. */
@@ -1039,6 +1301,7 @@ export default function AdminPanel() {
     }
 
     newData.leagueMatches = list;
+    syncCurrentLeagueIntoLeagues(newData);
     setData(newData);
   };
 
@@ -1053,19 +1316,22 @@ export default function AdminPanel() {
     if (removeAt >= 0) {
       list.splice(removeAt, 1);
       newData.leagueMatches = list;
+      syncCurrentLeagueIntoLeagues(newData);
       setData(newData);
     }
   };
 
-  // Eliminar todos los partidos de la liga actual (sin pasar a la siguiente ni guardar en histórico)
-  const clearCurrentLeagueMatches = () => {
-    if (!confirm('¿Eliminar todos los partidos de la liga actual? No se guarda en histórico ni se pasa a la siguiente liga. Puedes volver a generar jornadas después.')) return;
+  // Eliminar la liga actual por completo (sin guardar en histórico)
+  const deleteCurrentLeague = () => {
+    if (!confirm('¿Estás seguro de ELIMINAR la liga actual? No se guardará en histórico. Se eliminarán la tabla general y todos los partidos de esta liga. Esta acción no se puede deshacer.')) return;
     const newData = { ...data };
     const currentId = newData.currentLeagueId ?? 'default';
-    const list = Array.isArray(newData.leagueMatches) ? newData.leagueMatches.filter((m: any) => (m.leagueId ?? 'default') !== currentId) : [];
-    newData.leagueMatches = list;
+    newData.leagues = Array.isArray(newData.leagues) ? newData.leagues.filter((l: LeagueEntity) => l.id !== currentId) : [];
+    newData.league = { teams: [] };
+    newData.leagueMatches = Array.isArray(newData.leagueMatches) ? newData.leagueMatches.filter((m: any) => (m.leagueId ?? 'default') !== currentId) : [];
+    newData.currentLeagueId = null;
     setData(newData);
-    setMessage('✅ Partidos de la liga actual eliminados. Puedes generar jornadas de nuevo cuando quieras.');
+    setMessage('✅ Liga actual eliminada. No se guardó en histórico. Puedes crear una nueva liga cuando quieras.');
   };
 
   // ========== FUNCIONES PARA TORNEO CON GRUPOS ==========
@@ -1908,7 +2174,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="">Selecciona Equipo 1</option>
-                            {data.league.teams.map((team: Team) => (
+                            {allTeams.map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -1939,7 +2205,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="">Selecciona Equipo 2</option>
-                            {data.league.teams.map((team: Team) => (
+                            {allTeams.map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -2063,7 +2329,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="Por Definir">Por Definir</option>
-                            {data.league.teams.filter((team: Team) => team.name === match.team1.name || !usedInOtherR16.has(team.name)).map((team: Team) => (
+                            {allTeams.filter((team: Team) => team.name === match.team1.name || !usedInOtherR16.has(team.name)).map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -2115,7 +2381,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="Por Definir">Por Definir</option>
-                            {data.league.teams.filter((team: Team) => team.name === match.team2.name || !usedInOtherR16.has(team.name)).map((team: Team) => (
+                            {allTeams.filter((team: Team) => team.name === match.team2.name || !usedInOtherR16.has(team.name)).map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -2211,7 +2477,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="Por Definir">Por Definir</option>
-                            {data.league.teams.filter((team: Team) => team.name === match.team1.name || !usedInOtherQF.has(team.name)).map((team: Team) => (
+                            {allTeams.filter((team: Team) => team.name === match.team1.name || !usedInOtherQF.has(team.name)).map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -2263,7 +2529,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="Por Definir">Por Definir</option>
-                            {data.league.teams.filter((team: Team) => team.name === match.team2.name || !usedInOtherQF.has(team.name)).map((team: Team) => (
+                            {allTeams.filter((team: Team) => team.name === match.team2.name || !usedInOtherQF.has(team.name)).map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -2359,7 +2625,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="Por Definir">Por Definir</option>
-                            {data.league.teams.filter((team: Team) => team.name === match.team1.name || !usedInOtherSF.has(team.name)).map((team: Team) => (
+                            {allTeams.filter((team: Team) => team.name === match.team1.name || !usedInOtherSF.has(team.name)).map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -2411,7 +2677,7 @@ export default function AdminPanel() {
                             style={{ flex: 1, minWidth: '120px' }}
                           >
                             <option value="Por Definir">Por Definir</option>
-                            {data.league.teams.filter((team: Team) => team.name === match.team2.name || !usedInOtherSF.has(team.name)).map((team: Team) => (
+                            {allTeams.filter((team: Team) => team.name === match.team2.name || !usedInOtherSF.has(team.name)).map((team: Team) => (
                               <option key={team.name} value={team.name}>{team.name}</option>
                             ))}
                           </select>
@@ -2501,7 +2767,7 @@ export default function AdminPanel() {
                           style={{ flex: 1, minWidth: '120px' }}
                         >
                           <option value="Por Definir">Por Definir</option>
-                          {data.league.teams.map((team: Team) => (
+                          {allTeams.map((team: Team) => (
                             <option key={team.name} value={team.name}>{team.name}</option>
                           ))}
                         </select>
@@ -2541,7 +2807,7 @@ export default function AdminPanel() {
                           style={{ flex: 1, minWidth: '120px' }}
                         >
                           <option value="Por Definir">Por Definir</option>
-                          {data.league.teams.map((team: Team) => (
+                          {allTeams.map((team: Team) => (
                             <option key={team.name} value={team.name}>{team.name}</option>
                           ))}
                         </select>
@@ -2982,144 +3248,107 @@ export default function AdminPanel() {
 
         {activeTab === 'league' && (
           <div className="admin-section">
+            {(!data.league?.teams || data.league.teams.length === 0) ? (
+              <>
+                <h2 style={{ margin: 0, marginBottom: '20px' }}>🏆 Crear nueva liga</h2>
+                <p style={{ color: '#94a3b8', marginBottom: '16px' }}>
+                  Crea una liga con nombre y equipos. Al pulsar &quot;Crear liga&quot; se generan la Tabla General (a cero) y el calendario (ida y vuelta) automáticamente.
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
+                  <label style={{ color: '#fff', fontWeight: 600 }}>Nombre de la liga:</label>
+                  <input
+                    type="text"
+                    value={newLeagueName}
+                    onChange={(e) => setNewLeagueName(e.target.value)}
+                    placeholder="Ej. Temporada 2024-25"
+                    style={{ minWidth: '200px', padding: '10px 14px', background: '#0a0a0a', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '16px' }}>
+                  <label style={{ color: '#fff', fontWeight: 600 }}>Añadir equipo:</label>
+                  <select
+                    value={newLeagueSelectedTeam}
+                    onChange={(e) => setNewLeagueSelectedTeam(e.target.value)}
+                    style={{ minWidth: '180px', padding: '10px 14px', background: '#0a0a0a', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}
+                  >
+                    <option value="">Selecciona un equipo</option>
+                    {allTeams.filter((t: Team) => !newLeagueTeamNames.includes(t.name)).map((team: Team) => (
+                      <option key={team.name} value={team.name}>{team.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newLeagueSelectedTeam && !newLeagueTeamNames.includes(newLeagueSelectedTeam)) {
+                        setNewLeagueTeamNames([...newLeagueTeamNames, newLeagueSelectedTeam]);
+                        setNewLeagueSelectedTeam('');
+                      }
+                    }}
+                    className="add-btn"
+                    style={{ padding: '10px 18px' }}
+                  >
+                    Añadir equipo
+                  </button>
+                </div>
+                {newLeagueTeamNames.length > 0 && (
+                  <>
+                    <h4 style={{ color: '#ffd23f', marginBottom: '10px' }}>Equipos incluidos en la liga</h4>
+                    <table className="admin-table" style={{ marginBottom: '20px', maxWidth: '500px' }}>
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Equipo</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {newLeagueTeamNames.map((name, idx) => (
+                          <tr key={name}>
+                            <td>{idx + 1}</td>
+                            <td>{name}</td>
+                            <td>
+                              <button type="button" onClick={() => setNewLeagueTeamNames(newLeagueTeamNames.filter((n) => n !== name))} className="remove-btn" style={{ padding: '4px 8px' }} title="Quitar de la liga">🗑️</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <button
+                      type="button"
+                      onClick={createNewLeague}
+                      className="add-btn"
+                      style={{ padding: '12px 24px', fontSize: '1rem' }}
+                    >
+                      Crear liga
+                    </button>
+                  </>
+                )}
+                {newLeagueTeamNames.length === 0 && allTeams.length < 2 && (
+                  <p style={{ color: '#94a3b8' }}>Añade al menos 2 equipos en la pestaña <strong>Equipos</strong> para poder crear una liga.</p>
+                )}
+              </>
+            ) : (
+              <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
               <h2 style={{ margin: 0 }}>🏆 Tabla General</h2>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button
-                  onClick={clearCurrentLeagueMatches}
+                  onClick={deleteCurrentLeague}
                   className="remove-btn"
-                  style={{ padding: '10px 16px', fontSize: '0.9rem', background: 'rgba(148, 163, 184, 0.2)', border: '1px solid #94a3b8', color: '#94a3b8' }}
-                  title="Elimina solo los partidos de la liga actual. No guarda en histórico ni pasa a la siguiente liga."
+                  style={{ padding: '10px 16px', fontSize: '0.9rem' }}
+                  title="Elimina todos los datos de la liga actual sin guardar en histórico. Tabla general y partidos se borran."
                 >
-                  🗑️ Eliminar partidos de la liga actual
-                </button>
-                <button 
-                  onClick={async () => {
-                    if (!confirm('¿Finalizar liga? La Tabla General actual se guardará en Histórico (página Histórico → Mostrar Liga) y la Tabla quedará a cero para la siguiente liga.')) return;
-                    setLoading(true);
-                    setMessage('Guardando en Histórico y finalizando liga...');
-                    try {
-                      const res = await fetch('/api/snapshot-and-clear-league', { method: 'POST' });
-                      const json = await res.json().catch(() => ({}));
-                      if (res.ok && json.success) {
-                        await loadData();
-                        setMessage('✅ Liga finalizada. La Tabla se guardó en Histórico. Puedes verla en la pestaña «Histórico» o en el menú → Histórico → Mostrar Liga.');
-                      } else {
-                        setMessage(`❌ No se guardó. ${json.error || json.message || 'Error al finalizar'}. Inténtalo de nuevo.`);
-                      }
-                    } catch (e) {
-                      setMessage(`❌ No se guardó. Error: ${e instanceof Error ? e.message : 'Error de conexión'}.`);
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                  disabled={loading || (() => {
-                    const currentId = data?.currentLeagueId ?? 'default';
-                    const currentMatches = Array.isArray(data?.leagueMatches) ? data.leagueMatches.filter((m: any) => (m.leagueId ?? 'default') === currentId) : [];
-                    if (currentMatches.length === 0) return true;
-                    return !currentMatches.every((m: any) => m.status === 'jugado');
-                  })()}
-                  className="remove-btn"
-                  style={{ padding: '10px 20px', fontSize: '0.9rem' }}
-                  title="Solo habilitado cuando todos los partidos de la liga actual están jugados. Guarda la Tabla en Histórico y prepara la siguiente liga."
-                >
-                  🏁 Finalizar liga
-                </button>
-              </div>
-            </div>
-            
-            {/* Sección para ingresar resultados */}
-            <div className="admin-subsection" style={{ background: '#1a1a2e', padding: '20px', borderRadius: '8px', marginBottom: '30px', border: '2px solid #ff6b35' }}>
-              <h3 style={{ color: '#ffd23f', marginTop: 0 }}>⚽ Ingresar Resultado de Partido</h3>
-              <div className="admin-note" style={{ background: '#1e3a5f', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
-                <strong>💡 Instrucciones:</strong> Selecciona los equipos y ingresa los goles. El sistema calculará automáticamente: 
-                partidos jugados, victorias/empates/derrotas, diferencia de goles y puntos.
-              </div>
-              <div className="admin-match">
-                <select
-                  value={newResult.team1}
-                  onChange={(e) => setNewResult({ ...newResult, team1: e.target.value })}
-                  style={{ flex: 1, minWidth: '150px', padding: '10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}
-                >
-                  <option value="">Selecciona Equipo 1</option>
-                  {data.league.teams.map((team: Team) => (
-                    <option key={team.name} value={team.name}>{team.name}</option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  value={newResult.goals1}
-                  onChange={(e) => setNewResult({ ...newResult, goals1: e.target.value })}
-                  placeholder="Goles"
-                  style={{ width: '80px', padding: '10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff', borderRadius: '6px', textAlign: 'center' }}
-                  min="0"
-                />
-                <span>VS</span>
-                <input
-                  type="number"
-                  value={newResult.goals2}
-                  onChange={(e) => setNewResult({ ...newResult, goals2: e.target.value })}
-                  placeholder="Goles"
-                  style={{ width: '80px', padding: '10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff', borderRadius: '6px', textAlign: 'center' }}
-                  min="0"
-                />
-                <select
-                  value={newResult.team2}
-                  onChange={(e) => setNewResult({ ...newResult, team2: e.target.value })}
-                  style={{ flex: 1, minWidth: '150px', padding: '10px', background: '#0a0a0a', border: '1px solid #333', color: '#fff', borderRadius: '6px' }}
-                >
-                  <option value="">Selecciona Equipo 2</option>
-                  {data.league.teams.map((team: Team) => (
-                    <option key={team.name} value={team.name}>{team.name}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => {
-                    const { team1, team2, goals1, goals2 } = newResult;
-                    
-                    if (!team1 || !team2) {
-                      setMessage('⚠️ Por favor selecciona ambos equipos');
-                      return;
-                    }
-                    
-                    if (team1 === team2) {
-                      setMessage('⚠️ Los equipos deben ser diferentes');
-                      return;
-                    }
-                    
-                    const goals1Num = parseInt(goals1) || 0;
-                    const goals2Num = parseInt(goals2) || 0;
-                    
-                    applyMatchResultToLeague(team1, goals1Num, team2, goals2Num);
-                    
-                    // Limpiar campos
-                    setNewResult({ team1: '', team2: '', goals1: '', goals2: '' });
-                    setMessage('✅ Resultado aplicado correctamente');
-                  }}
-                  className="save-btn"
-                  style={{ padding: '10px 20px', fontSize: '0.9rem' }}
-                >
-                  ✅ Aplicar Resultado
+                  🗑️ Eliminar liga
                 </button>
               </div>
             </div>
 
-            {/* Partidos de la liga (calendario): generar jornadas y editar */}
-            <div className="admin-subsection" style={{ background: '#1a1a2e', padding: '20px', borderRadius: '8px', marginBottom: '24px', border: '2px solid #3b82f6' }}>
-              <h3 style={{ color: '#60a5fa', marginTop: 0 }}>📅 Partidos de la liga (calendario)</h3>
+            {/* Calendario (partidos de la liga) */}
+            <div className="admin-subsection" style={{ background: 'rgba(26, 26, 26, 0.6)', padding: '20px', borderRadius: '12px', marginBottom: '24px', border: '1px solid rgba(255, 107, 53, 0.2)' }}>
+              <h3 style={{ color: '#ff6b35', marginTop: 0, fontFamily: 'Orbitron, sans-serif' }}>CALENDARIO</h3>
               <p style={{ color: '#b0b0b0', fontSize: '0.9rem', marginBottom: '12px' }}>
-                Liga actual: <code style={{ background: '#0a0a0a', padding: '2px 8px', borderRadius: '4px' }}>{data.currentLeagueId ?? 'default'}</code>. Al &quot;Limpiar Tabla General&quot; se crea una nueva liga y los partidos anteriores se conservan en el histórico.
+                Liga actual: <strong style={{ color: '#ffd23f' }}>{(Array.isArray(data.leagues) ? data.leagues.find((l: LeagueEntity) => l.id === (data.currentLeagueId ?? 'default')) : null)?.name ?? data.currentLeagueId ?? '—'}</strong>
               </p>
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={generateLeagueMatchdays}
-                  className="add-btn"
-                  style={{ background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6', color: '#60a5fa' }}
-                  title="Genera todos los partidos de la liga actual: ida y vuelta. Fecha: POR DEFINIR, estadio: del equipo local."
-                >
-                  🏟️ Generar jornadas (ida y vuelta)
-                </button>
-              </div>
               <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '16px' }}>
                 Cada equipo se enfrenta a todos los demás dos veces (local y visitante). Edita fecha y estadio. Añade goles con la cronología y pulsa &quot;Finalizar partido&quot; para guardar el resultado y actualizar la Tabla General. Los partidos jugados aparecen al final por si necesitas modificar algo.
               </p>
@@ -3127,7 +3356,7 @@ export default function AdminPanel() {
                 const list = Array.isArray(data.leagueMatches) ? data.leagueMatches : [];
                 const currentId = data.currentLeagueId ?? 'default';
                 const currentMatches = list.filter((m: any) => (m.leagueId ?? 'default') === currentId);
-                const sortMatches = (arr: any[]) => [...arr].sort((a: any, b: any) => {
+                const sortMatchesByMatchday = (arr: any[]) => [...arr].sort((a: any, b: any) => {
                   const ja = a.matchday ?? 0;
                   const jb = b.matchday ?? 0;
                   if (ja !== jb) return ja - jb;
@@ -3137,8 +3366,14 @@ export default function AdminPanel() {
                   if (da !== 'POR DEFINIR' && db === 'POR DEFINIR') return -1;
                   return da.localeCompare(db);
                 });
-                const porJugar = sortMatches(currentMatches.filter((m: any) => m.status !== 'jugado'));
-                const jugados = sortMatches(currentMatches.filter((m: any) => m.status === 'jugado'));
+                const byMatchday: Record<number, any[]> = {};
+                currentMatches.forEach((m: any) => {
+                  const j = m.matchday ?? 0;
+                  if (!byMatchday[j]) byMatchday[j] = [];
+                  byMatchday[j].push(m);
+                });
+                const matchdayNumbers = Object.keys(byMatchday).map(Number).sort((a, b) => a - b);
+                matchdayNumbers.forEach((j) => { byMatchday[j] = sortMatchesByMatchday(byMatchday[j]); });
                 const renderMatch = (match: any, origIndex: number) => {
                   const isJugado = match.status === 'jugado';
                   const hist = match.historial && typeof match.historial === 'object' ? match.historial : { local: [], away: [] };
@@ -3263,45 +3498,27 @@ export default function AdminPanel() {
                   );
                 };
                 return currentMatches.length === 0 ? (
-                  <p style={{ color: '#888' }}>No hay partidos de esta liga. Pulsa &quot;Generar jornadas (ida y vuelta)&quot; después de tener equipos inscritos.</p>
+                  <p style={{ color: '#888' }}>No hay partidos de esta liga.</p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '600px', overflowY: 'auto' }}>
-                    <div>
-                      <h4 style={{ margin: '0 0 12px 0', color: '#ff6b35', fontSize: '1rem', fontWeight: 700, borderBottom: '2px solid rgba(255,107,53,0.4)', paddingBottom: '6px' }}>Partidos por jugar</h4>
-                      {porJugar.length === 0 ? (
-                        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No hay partidos pendientes.</p>
-                      ) : (
+                  <div className="admin-calendar-scroll" style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxHeight: '600px', overflowY: 'auto' }}>
+                    {matchdayNumbers.map((matchday) => (
+                      <div key={matchday}>
+                        <h4 style={{ margin: '0 0 12px 0', color: '#ff6b35', fontSize: '1rem', fontWeight: 700, borderBottom: '2px solid rgba(255,107,53,0.4)', paddingBottom: '6px' }}>
+                          {matchday === 0 ? 'Sin jornada' : `Jornada ${matchday}`}
+                        </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          {porJugar.map((match: any) => {
+                          {byMatchday[matchday].map((match: any) => {
                             const origIndex = currentMatches.indexOf(match);
                             return renderMatch(match, origIndex);
                           })}
                         </div>
-                      )}
-                    </div>
-                    <div>
-                      <h4 style={{ margin: '0 0 12px 0', color: '#94a3b8', fontSize: '1rem', fontWeight: 700, borderBottom: '2px solid rgba(148,163,184,0.4)', paddingBottom: '6px' }}>Partidos jugados</h4>
-                      <p style={{ color: '#64748b', fontSize: '0.8rem', margin: '0 0 8px 0' }}>Solo para revisión o modificar algo si hace falta.</p>
-                      {jugados.length === 0 ? (
-                        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Aún no hay partidos finalizados.</p>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          {jugados.map((match: any) => {
-                            const origIndex = currentMatches.indexOf(match);
-                            return renderMatch(match, origIndex);
-                          })}
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    ))}
                   </div>
                 );
               })()}
             </div>
             
-            <div className="admin-note" style={{ background: '#1e3a5f', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-              <strong>💡 Nota:</strong> También puedes editar manualmente las estadísticas en la tabla. Las estadísticas se calculan automáticamente 
-              cuando editas goles a favor/en contra o victorias/empates/derrotas.
-            </div>
             <table className="admin-table">
               <thead>
                 <tr>
@@ -3321,55 +3538,13 @@ export default function AdminPanel() {
                 {data.league.teams.map((team: Team, index: number) => (
                   <tr key={index}>
                     <td>{team.position}</td>
-                    <td>
-                      <input
-                        type="text"
-                        value={team.name}
-                        onChange={(e) => updateLeagueTeam(index, 'name', e.target.value)}
-                        className="admin-input-small"
-                      />
-                    </td>
+                    <td>{team.name}</td>
                     <td>{team.played}</td>
-                    <td>
-                      <input
-                        type="number"
-                        value={team.wins}
-                        onChange={(e) => updateLeagueTeam(index, 'wins', parseInt(e.target.value))}
-                        className="admin-input-tiny"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        value={team.draws}
-                        onChange={(e) => updateLeagueTeam(index, 'draws', parseInt(e.target.value))}
-                        className="admin-input-tiny"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        value={team.losses}
-                        onChange={(e) => updateLeagueTeam(index, 'losses', parseInt(e.target.value))}
-                        className="admin-input-tiny"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        value={team.goalsFor}
-                        onChange={(e) => updateLeagueTeam(index, 'goalsFor', parseInt(e.target.value))}
-                        className="admin-input-tiny"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        value={team.goalsAgainst}
-                        onChange={(e) => updateLeagueTeam(index, 'goalsAgainst', parseInt(e.target.value))}
-                        className="admin-input-tiny"
-                      />
-                    </td>
+                    <td>{team.wins}</td>
+                    <td>{team.draws}</td>
+                    <td>{team.losses}</td>
+                    <td>{team.goalsFor}</td>
+                    <td>{team.goalsAgainst}</td>
                     <td style={{ color: team.goalDifference >= 0 ? '#4ade80' : '#f87171', fontWeight: '600' }}>
                       {team.goalDifference}
                     </td>
@@ -3380,6 +3555,8 @@ export default function AdminPanel() {
                 ))}
               </tbody>
             </table>
+              </>
+            )}
           </div>
         )}
 
@@ -3397,7 +3574,7 @@ export default function AdminPanel() {
             </div>
             <h3 style={{ color: '#ffd23f', marginBottom: '16px' }}>📋 Listado de equipos (color y estadio)</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-              {data.league.teams.map((team: Team, index: number) => (
+              {allTeams.map((team: Team, index: number) => (
                 <div key={index} style={{ 
                   background: '#1a1a2e', 
                   padding: '0',
@@ -3472,7 +3649,7 @@ export default function AdminPanel() {
                   style={{ flex: 1, minWidth: '150px' }}
                 >
                   <option value="">Selecciona Equipo 1</option>
-                  {data.league.teams.map((team: Team) => (
+                  {allTeams.map((team: Team) => (
                     <option key={team.name} value={team.name}>{team.name}</option>
                   ))}
                 </select>
@@ -3483,7 +3660,7 @@ export default function AdminPanel() {
                   style={{ flex: 1, minWidth: '150px' }}
                 >
                   <option value="">Selecciona Equipo 2</option>
-                  {data.league.teams.map((team: Team) => (
+                  {allTeams.map((team: Team) => (
                     <option key={team.name} value={team.name}>{team.name}</option>
                   ))}
                 </select>
@@ -3550,9 +3727,52 @@ export default function AdminPanel() {
               })).filter(r => r.matches.length > 0);
               const hasCopa = copaByRounds.length > 0;
               const hasLiga = (historyData?.liga?.league?.teams?.length ?? 0) > 0;
-              if (!hasCopa && !hasLiga) return <p style={{ color: '#888' }}>No hay histórico todavía.</p>;
+              const finishedLeagues = Array.isArray(data?.leagues) ? data.leagues.filter((l: LeagueEntity) => l.status === 'Finalizada') : [];
+              const hasFinishedLeagues = finishedLeagues.length > 0;
+              if (!hasCopa && !hasLiga && !hasFinishedLeagues) return <p style={{ color: '#888' }}>No hay histórico todavía.</p>;
               return (
               <>
+                {hasFinishedLeagues && (
+                  <div className="admin-subsection" style={{ background: '#1a1a2e', padding: '20px', borderRadius: '8px', marginBottom: '24px', border: '2px solid #3b82f6' }}>
+                    <h3 style={{ color: '#60a5fa', marginTop: 0 }}>🏆 Ligas finalizadas (registro)</h3>
+                    <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '12px' }}>
+                      Historial de ligas almacenadas en la base de datos. Cada liga guarda equipos, tabla general, partidos, estado y ganador.
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {finishedLeagues.map((L: LeagueEntity) => (
+                        <div key={L.id} style={{ background: 'rgba(0,0,0,0.3)', padding: '14px', borderRadius: '8px', border: '1px solid #334155' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                            <div>
+                              <strong style={{ color: '#fff' }}>{L.name || L.id}</strong>
+                              <span style={{ color: '#94a3b8', marginLeft: '10px', fontSize: '0.9rem' }}>
+                                Ganador: <strong style={{ color: '#ffd23f' }}>{L.winner ?? '—'}</strong>
+                              </span>
+                            </div>
+                            <span style={{ color: '#64748b', fontSize: '0.85rem' }}>{L.createdAt ? new Date(L.createdAt).toLocaleDateString('es-ES') : ''}</span>
+                          </div>
+                          {Array.isArray(L.standings) && L.standings.length > 0 && (
+                            <details style={{ marginTop: '10px' }}>
+                              <summary style={{ cursor: 'pointer', color: '#60a5fa', fontSize: '0.9rem' }}>Ver tabla general</summary>
+                              <table className="admin-table" style={{ width: '100%', marginTop: '8px', fontSize: '0.85rem' }}>
+                                <thead>
+                                  <tr><th>#</th><th>Equipo</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th><th>Pts</th></tr>
+                                </thead>
+                                <tbody>
+                                  {(L.standings as Team[]).map((t: Team) => (
+                                    <tr key={t.name}>
+                                      <td>{t.position}</td><td>{t.name}</td><td>{t.played}</td><td>{t.wins}</td><td>{t.draws}</td><td>{t.losses}</td>
+                                      <td>{t.goalsFor}</td><td>{t.goalsAgainst}</td><td>{t.goalDifference}</td><td><strong>{t.points}</strong></td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </details>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {hasCopa && (
                   <div className="admin-subsection" style={{ background: '#1a1a2e', padding: '20px', borderRadius: '8px', marginBottom: '24px', border: '2px solid #ff6b35' }}>
                     <h3 style={{ color: '#ffd23f', marginTop: 0 }}>🏆 Histórico Copa (último al pulsar &quot;Eliminar datos de la copa&quot;)</h3>
@@ -3617,6 +3837,21 @@ export default function AdminPanel() {
           <button onClick={handleSave} disabled={loading} className="save-btn">
             {loading ? 'Guardando...' : '💾 Guardar Cambios'}
           </button>
+          {data?.currentLeagueId && data?.league?.teams?.length > 0 && (
+            <button
+              onClick={handleFinalizeLeague}
+              disabled={loading || (() => {
+                const currentId = data?.currentLeagueId ?? 'default';
+                const currentMatches = Array.isArray(data?.leagueMatches) ? data.leagueMatches.filter((m: any) => (m.leagueId ?? 'default') === currentId) : [];
+                if (currentMatches.length === 0) return true;
+                return !currentMatches.every((m: any) => m.status === 'jugado');
+              })()}
+              className="save-btn"
+              title="Solo habilitado cuando todos los partidos de la liga actual están jugados. Guarda la Tabla en Histórico y prepara la siguiente liga."
+            >
+              🏁 Finalizar liga
+            </button>
+          )}
         </div>
       </div>
 
@@ -3677,7 +3912,7 @@ export default function AdminPanel() {
                 padding: '10px',
                 background: '#0a0a0a'
               }}>
-                {data.league.teams.map((team: Team) => (
+                {allTeams.map((team: Team) => (
                   <label key={team.name} style={{ 
                     display: 'block', 
                     padding: '8px',

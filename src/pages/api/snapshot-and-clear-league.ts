@@ -8,9 +8,9 @@ export const prerender = false;
 const HISTORICO_ID = 'data';
 
 /**
- * Guarda el torneo actual en Histórico (liga) y luego inserta el mismo torneo
- * con la tabla de liga a cero. Así "Limpiar tabla" guarda los datos en Histórico
- * hasta que vuelvas a pulsar el botón (entonces se actualiza con los nuevos datos).
+ * Marca la liga actual como Finalizada (con ganador), guarda en Histórico,
+ * y deja la vista lista para crear una nueva liga (league/leagueMatches vacíos, currentLeagueId null).
+ * Las ligas quedan almacenadas en el documento como entidades (leagues[]) con estado y ganador.
  */
 export const POST: APIRoute = async () => {
   try {
@@ -29,53 +29,67 @@ export const POST: APIRoute = async () => {
       );
     }
 
-    const { _id, createdAt, ...snapshot } = current;
+    const currentLeagueId = current.currentLeagueId ?? 'default';
+    const leagues = Array.isArray(current.leagues) ? current.leagues.map((L: any) => ({ ...L })) : [];
+    const idx = leagues.findIndex((L: any) => L.id === currentLeagueId);
 
-    // 1) Guardar en Histórico de liga (se reemplaza cada vez que se pulsa "Limpiar tabla")
+    // Ganador = primero de la tabla general
+    const winner = (current.league.teams as any[])[0]?.name ?? null;
+
+    if (idx >= 0) {
+      leagues[idx].status = 'Finalizada';
+      leagues[idx].winner = winner;
+      leagues[idx].standings = (current.league.teams as any[]).map((t: any) => ({ ...t }));
+      leagues[idx].matches = Array.isArray(current.leagueMatches)
+        ? (current.leagueMatches as any[]).filter((m: any) => (m.leagueId ?? 'default') === currentLeagueId).map((m: any) => ({ ...m }))
+        : [];
+    } else {
+      // Si la liga actual no estaba en leagues (datos antiguos), añadirla como finalizada
+      leagues.push({
+        id: currentLeagueId,
+        name: 'Liga finalizada',
+        standings: (current.league.teams as any[]).map((t: any) => ({ ...t })),
+        matches: Array.isArray(current.leagueMatches)
+          ? (current.leagueMatches as any[]).filter((m: any) => (m.leagueId ?? 'default') === currentLeagueId).map((m: any) => ({ ...m }))
+          : [],
+        status: 'Finalizada',
+        winner,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    // 1) Guardar en Histórico (snapshot con liga actual finalizada para "Mostrar Liga")
+    const snapshotForHistory = {
+      ...current,
+      _id: undefined,
+      createdAt: undefined,
+      league: current.league,
+      leagueMatches: current.leagueMatches,
+      leagues,
+      currentLeagueId
+    };
     await historicoColl.updateOne(
       { _id: HISTORICO_ID },
-      { $set: { liga: snapshot, ligaUpdatedAt: new Date() } },
+      { $set: { liga: snapshotForHistory, ligaUpdatedAt: new Date() } },
       { upsert: true }
     );
 
-    // 2) Insertar torneo actual con tabla a cero (mismos equipos, estadísticas en 0)
-    const clearedTeams = (current.league.teams as any[]).map((t: any) => ({
-      position: t.position ?? 0,
-      name: t.name ?? '',
-      color: t.color,
-      colorSecondary: t.colorSecondary,
-      stadiumName: t.stadiumName,
-      stadiumImage: t.stadiumImage,
-      leaguesWon: t.leaguesWon,
-      cupsWon: t.cupsWon,
-      played: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      goalsFor: 0,
-      goalsAgainst: 0,
-      goalDifference: 0,
-      points: 0
-    }));
-    const newLeagueId = `liga-${new Date().toISOString().slice(0, 7)}-${Date.now()}`;
+    // 2) Nuevo documento: misma copa/torneo, liga vista vacía, currentLeagueId null, leagues con la liga finalizada
+    const { _id, createdAt, ...rest } = current;
     const cleared = {
-      bracket: snapshot.bracket,
-      league: { teams: clearedTeams },
-      upcomingMatches: snapshot.upcomingMatches ?? [],
-      leagueMatches: snapshot.leagueMatches ?? [],
-      currentLeagueId: newLeagueId,
-      tournament: snapshot.tournament ?? {
-        type: 'groups',
-        groups: [],
-        knockoutRounds: { roundOf16: [], quarterFinals: [], semiFinals: [], final: null }
-      }
+      ...rest,
+      leagues,
+      league: { teams: [] },
+      leagueMatches: [],
+      currentLeagueId: null,
+      createdAt: new Date()
     };
-    await collection.insertOne({ ...cleared, createdAt: new Date() });
+    await collection.insertOne(cleared);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Tabla General guardada en Tabla de histórico y limpiada.'
+        message: 'Liga finalizada. Tabla guardada en Histórico. Puedes crear una nueva liga cuando quieras.'
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
@@ -83,7 +97,7 @@ export const POST: APIRoute = async () => {
     console.error('Error snapshot-and-clear-league:', error);
     const msg = error instanceof Error ? error.message : 'Error desconocido';
     return new Response(
-      JSON.stringify({ error: 'Error al guardar histórico y limpiar tabla', details: msg }),
+      JSON.stringify({ error: 'Error al guardar histórico y finalizar liga', details: msg }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

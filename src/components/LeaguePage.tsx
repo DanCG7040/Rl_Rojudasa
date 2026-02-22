@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LeagueTable from './LeagueTable';
 import LeagueCalendar from './LeagueCalendar';
+import '../styles/hero.css';
 import '../styles/league-table.css';
 import '../styles/league-calendar.css';
 
@@ -21,29 +22,26 @@ const tabStyle = (active: boolean) => ({
 
 export default function LeaguePage() {
   const [tab, setTab] = useState<Tab>('tabla');
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
 
   return (
     <>
-      <div className="container" style={{ paddingTop: '80px', paddingBottom: '20px' }}>
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            style={tabStyle(tab === 'tabla')}
-            onClick={() => setTab('tabla')}
-          >
-            📊 Tabla
-          </button>
-          <button
-            type="button"
-            style={tabStyle(tab === 'calendario')}
-            onClick={() => setTab('calendario')}
-          >
-            📅 Calendario
-          </button>
+      <section className="hero hero-league" id="league-hero">
+        <div className="hero-content">
+          <h1 className={`hero-title ${isVisible ? 'animate-fade-in' : ''}`}>
+            LIGA
+          </h1>
+          <p className={`hero-subtitle ${isVisible ? 'animate-fade-in-delay' : ''}`}>
+            TABLA Y CALENDARIO
+          </p>
         </div>
-      </div>
-      {tab === 'tabla' && <LeagueTable />}
-      {tab === 'calendario' && <LeagueCalendar />}
+      </section>
+      {tab === 'tabla' && <LeagueTable currentTab={tab} onTabChange={setTab} tabStyle={tabStyle} />}
+      {tab === 'calendario' && <LeagueCalendar currentTab={tab} onTabChange={setTab} tabStyle={tabStyle} />}
     </>
   );
 }

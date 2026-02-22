@@ -1,6 +1,6 @@
 .hero {
-  min-height: 70vh;
-  min-height: 70dvh;
+  min-height: 45vh;
+  min-height: 45dvh;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -8,7 +8,7 @@
   position: relative;
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
   overflow: hidden;
-  padding: clamp(70px, 12vw, 100px) 16px 40px;
+  padding: clamp(80px, 10vw, 100px) 16px 28px;
 }
 
 .hero::before {
@@ -46,7 +46,7 @@
 
 .hero-title {
   font-family: 'Orbitron', sans-serif;
-  font-size: clamp(2.5rem, 8vw, 6rem);
+  font-size: clamp(2rem, 6vw, 4rem);
   font-weight: 900;
   background: linear-gradient(135deg, #ff6b35 0%, #ffd23f 50%, #ff6b35 100%);
   background-size: 200% auto;
@@ -74,9 +74,9 @@
 
 .hero-subtitle {
   font-family: 'Orbitron', sans-serif;
-  font-size: clamp(1.2rem, 3vw, 2rem);
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
   color: #b0b0b0;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   opacity: 0;
   transform: translateY(30px);
 }
@@ -111,4 +111,22 @@
   }
 }
 
+/* Hero de la sección Liga: misma separación que el index */
+.hero-league {
+  min-height: 45vh;
+  min-height: 45dvh;
+  padding: clamp(80px, 10vw, 100px) 16px 28px;
+}
 
+.hero-league::before {
+  background-image: url('/img/rocket-league-bg.jpg');
+}
+
+.hero-league .hero-title {
+  font-size: clamp(2rem, 6vw, 4rem);
+}
+
+.hero-league .hero-subtitle {
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+  margin-bottom: 1rem;
+}

@@ -14,14 +14,28 @@ interface Team {
   points: number;
 }
 
-export default function LeagueTable() {
+type Tab = 'tabla' | 'calendario';
+
+interface LeagueTableProps {
+  currentTab: Tab;
+  onTabChange: (tab: Tab) => void;
+  tabStyle: (active: boolean) => React.CSSProperties;
+}
+
+export default function LeagueTable({ currentTab, onTabChange, tabStyle }: LeagueTableProps) {
   const [teams, setTeams] = useState<Team[]>([]);
+  const [leagueName, setLeagueName] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('position');
 
   useEffect(() => {
     fetch('/api/data.json', { cache: 'no-store' })
       .then(res => res.json())
-      .then(data => setTeams(data.league.teams))
+      .then(data => {
+        setTeams(data.league?.teams ?? []);
+        const currentId = data.currentLeagueId ?? 'default';
+        const currentLeague = Array.isArray(data.leagues) ? data.leagues.find((l: { id: string; name?: string }) => l.id === currentId) : null;
+        setLeagueName(currentLeague?.name ?? currentId ?? '');
+      })
       .catch(err => console.error('Error loading league:', err));
   }, []);
 
@@ -41,6 +55,19 @@ export default function LeagueTable() {
     <section className="league-table-section" id="league">
       <div className="container">
         <h2 className="section-title">TABLA GENERAL</h2>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
+          <button type="button" style={tabStyle(currentTab === 'tabla')} onClick={() => onTabChange('tabla')}>
+            📊 Tabla General
+          </button>
+          <button type="button" style={tabStyle(currentTab === 'calendario')} onClick={() => onTabChange('calendario')}>
+            📅 Calendario
+          </button>
+        </div>
+        {leagueName && (
+          <p className="league-table-league-name" style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '0', marginBottom: '1rem', fontWeight: 600 }}>
+            LIGA {leagueName}
+          </p>
+        )}
         <div className="table-wrapper">
           <table className="league-table">
             <thead>

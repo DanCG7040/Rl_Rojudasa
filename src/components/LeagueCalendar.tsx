@@ -2,8 +2,17 @@ import { useEffect, useState, useMemo } from 'react';
 import LeagueMatchCard, { type LeagueMatch } from './LeagueMatchCard';
 import '../styles/league-calendar.css';
 
-export default function LeagueCalendar() {
+type Tab = 'tabla' | 'calendario';
+
+interface LeagueCalendarProps {
+  currentTab: Tab;
+  onTabChange: (tab: Tab) => void;
+  tabStyle: (active: boolean) => React.CSSProperties;
+}
+
+export default function LeagueCalendar({ currentTab, onTabChange, tabStyle }: LeagueCalendarProps) {
   const [matches, setMatches] = useState<LeagueMatch[]>([]);
+  const [leagueName, setLeagueName] = useState<string>('');
   const [teamColors, setTeamColors] = useState<Record<string, string>>({});
   const [teamColorsSecondary, setTeamColorsSecondary] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -16,6 +25,9 @@ export default function LeagueCalendar() {
         const currentId = data.currentLeagueId ?? 'default';
         const list = all.filter((m: LeagueMatch) => (m.leagueId ?? 'default') === currentId);
         setMatches(list);
+
+        const currentLeague = Array.isArray(data.leagues) ? data.leagues.find((l: { id: string; name?: string }) => l.id === currentId) : null;
+        setLeagueName(currentLeague?.name ?? currentId ?? '');
 
         const colors: Record<string, string> = {};
         const secondary: Record<string, string> = {};
@@ -60,6 +72,14 @@ export default function LeagueCalendar() {
       <section className="league-calendar-section">
         <div className="container">
           <h2 className="section-title">CALENDARIO</h2>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '24px' }}>
+            <button type="button" style={tabStyle(currentTab === 'tabla')} onClick={() => onTabChange('tabla')}>
+              📊 Tabla General
+            </button>
+            <button type="button" style={tabStyle(currentTab === 'calendario')} onClick={() => onTabChange('calendario')}>
+              📅 Calendario
+            </button>
+          </div>
           <p style={{ textAlign: 'center', color: '#b0b0b0' }}>Cargando partidos...</p>
         </div>
       </section>
@@ -70,6 +90,19 @@ export default function LeagueCalendar() {
     <section className="league-calendar-section">
       <div className="container">
         <h2 className="section-title">CALENDARIO</h2>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
+          <button type="button" style={tabStyle(currentTab === 'tabla')} onClick={() => onTabChange('tabla')}>
+            📊 Tabla General
+          </button>
+          <button type="button" style={tabStyle(currentTab === 'calendario')} onClick={() => onTabChange('calendario')}>
+            📅 Calendario
+          </button>
+        </div>
+        {leagueName && (
+          <p className="league-calendar-league-name" style={{ textAlign: 'center', color: '#94a3b8', fontSize: '1.1rem', marginTop: '0', marginBottom: '1rem', fontWeight: 600 }}>
+            LIGA {leagueName}
+          </p>
+        )}
         <div className="league-calendar-grid">
           {matches.length === 0 ? (
             <p className="league-match-empty">Aún no hay partidos en el calendario.</p>
